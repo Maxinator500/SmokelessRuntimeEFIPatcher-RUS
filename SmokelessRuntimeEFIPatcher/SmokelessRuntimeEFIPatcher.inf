@@ -13,8 +13,6 @@
   OpCode.c
   RussianFont.c
   Strings.uni
-  Images.idf
-  Logo.bmp
 
 [Packages]
   SREPPkg/SmokelessRuntimeEFIPatcher.dec
@@ -40,6 +38,8 @@
   ShellLib
   FileHandleLib
   SortLib
+  HandleParsingLib
+  UefiShellCommandLib
 
 [Protocols]
   gEfiLoadedImageProtocolGuid                   ## CONSUMES
@@ -49,7 +49,6 @@
   gEfiSerialIoProtocolGuid                      ## CONSUMES
   gEfiDevicePathToTextProtocolGuid              ## CONSUMES
   gEfiShellParametersProtocolGuid               ## CONSUMES
-  gEfiFirmwareVolumeProtocolGuid                ## CONSUMES
   gEfiFirmwareVolume2ProtocolGuid               ## CONSUMES
   gEdkiiFormBrowserEx2ProtocolGuid              ## CONSUMES
   gEdkiiFormBrowserExProtocolGuid               ## CONSUMES

@@ -13,7 +13,7 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/PrintLib.h>
-#include <Protocol/FirmwareVolume.h>              //FirmwareVolumeProtocol. Is not part of edk2, may add manually.
+#include <Library/PeCoffGetEntryPointLib.h>
 #include <Protocol/FirmwareVolume2.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/DevicePath.h>
@@ -31,14 +31,18 @@
 #include <Library/HiiLib.h>                       //       for fonts and strings
 #include <Library/UefiRuntimeServicesTableLib.h>  //       for gRT
 #include <Library/ShellLib.h>                     //       for FindNextFile
+#include <Library/ShellCommandLib.h>              //       for HandleParsingLib' CatSDumpHex
+#include <Library/HandleParsingLib.h>             //       for FindLoadedImageFromShellIndex
 
-//C2220 suppression due to log filename issues
+#include "FirmwareVolumeProtocol.h"               //FirmwareVolumeProtocol definition from EDK1
+
+//C2220 suppression due to 'declaration of identifier hiding global declaration'
 #pragma warning(disable:4459)
-#pragma warning(disable:4456)
-#pragma warning(disable:4244)
 
-//Set default lang
+EFI_GUID gHIIRussianFontGuid;
+EFI_GUID gEfiSREPLangVariableGuid = { 0x257ea3f4, 0xc447, 0x4b22, { 0xbb, 0x1c, 0x37, 0x9b, 0x7f, 0xde, 0x28, 0x3e } };
 EFI_HII_HANDLE HiiHandle;
+const UINTN genericBufferSize = 0x200;
 
 //Initizalize log function
 VOID LogToFile(
@@ -46,7 +50,8 @@ VOID LogToFile(
   IN CHAR16 *String
 );
 
-CHAR16 *FindLoadedImageFileName(
+//Copy from HandleParsingLib
+CHAR16 *FindLoadedImageFileNameSREP(
   IN EFI_LOADED_IMAGE_PROTOCOL *LoadedImage,
   IN EFI_GUID FilterProtocol
 );
@@ -80,13 +85,26 @@ EFI_STATUS LocateAndLoadFvFromGuid(
 );
 
 EFI_STATUS RegexMatch(
-  IN      UINT8 *DUMP,
-  IN      CHAR8 *Pattern,
-  IN      UINT16 Size,
-  IN      EFI_REGULAR_EXPRESSION_PROTOCOL *Oniguruma,
-  OUT     BOOLEAN *CResult
+  IN UINT8 *DUMP,
+  IN CHAR8 *Pattern,
+  IN UINT16 Size,
+  IN EFI_REGULAR_EXPRESSION_PROTOCOL *Oniguruma,
+  OUT BOOLEAN *CResult
+);
+
+//Copy from HandleParsingLib
+EFI_STRING HiiGetStringSREP(
+  IN EFI_HII_HANDLE  HiiHandle,
+  IN EFI_STRING_ID   StringId,
+  IN CONST CHAR8 *Language  OPTIONAL
+);
+
+CHAR16 *
+LoadedImageProtocolDumpFilePath(
+  IN CONST EFI_HANDLE  TheHandle
 );
 
 UINT8 *FindBaseAddressFromName(
-  IN const CHAR16 *Name
+  IN const CHAR16 *Name,
+  IN EFI_GUID FilterProtocol
 );

@@ -7,7 +7,7 @@
 [Defines]
   DEC_SPECIFICATION              = 0x00010006
   PACKAGE_NAME                   = SmokelessRuntimeEFIPatcherPkg
-  PACKAGE_GUID                   = 7e7edbba-ca2c-4177-a3f0-d3371358773a
+  PACKAGE_GUID                   = D96C279F-CAAC-41F0-AD2C-8BEC749BA76C
   PACKAGE_VERSION                = 1.01
 
 [Includes]

@@ -5,13 +5,13 @@
 * Написал несколько комментариев в файлах исх. кода.
 * Появился Рус перевод для сообщений на экране и в логе, вывод в лог был приспособлен для кодировки Unicode. Сами сообщения учащены, чтобы прогресс выполнения лучше отслеживался, и у пользователя не возникало мысли что программа зависла.
   </br>Переключение на Анг доступно через аргумент ENG (например, "SREP.efi ENG"). Но, как можно догадаться, тогда вызов SREP нужно осуществить через командную строку в Shell. Разрешается передавать параметр ENG в .nsh.
-  </br>С версии 0.2.0 для переключения языка нужно чтобы переменная PlatformLang была доступна для записи.
 * Файл конфига больше не обязан иметь название 'SREP_Config.cfg'. Теперь патчер выбирает в качестве конфига первый найденный файл с расширением '.cfg'.
-* Добавил 7 новых команд: NonamePE, NonameTE, LoadGUIDandSavePE, LoadGUIDandSaveFreeform, UninstallProtocol, Compatibility и Skip.
+* Добавил 7 новых команд: NonamePE, NonameTE, LoadGUIDandSavePE, LoadGUIDandSaveFreeform, UninstallProtocol, Compatibility, Skip, HandleIndex.
   </br>В каких случаях могут быть полезны - далее.
 * Добавил поддержку абстрактных знаков (regex) для использования в строке шаблона. Классы знаков доступны [по ссылке](https://gist.github.com/kaigouthro/e8bad6a2c8df6ff13b8716027a172dc0#3-character-types).
 * По умолчанию, комбинация Patch - Pattern теперь заменяет все вхождения, а не только первое, которые соответствуют указанному шаблону.
   </br>Старую реализацию Patch выделил в отдельную команду FastPatch.
+  </br>При неверном запуске SREP, Op Patch превращается в Op FastPatch и абстрактные знаки в шаблоне приводят к преждевременному выходу из программы.
 * Добавил игнорирование строк конфига включащие символ решетки "#". Применимо для написания комментариев в файле.
   <details>
   <summary><strong>Пример комментариев</strong></summary>
@@ -21,7 +21,7 @@
   </details>
 
 # Как использовать
-1. Скомпильте исп. файл сами или загрузите со страницы релизов. Текущая версия - 0.2.0.
+1. Скомпильте исп. файл сами или загрузите со страницы релизов. Текущая версия - 0.2.1.
 2. Распакуйте файл на накопитель и сделайте его загрузочным.
 3. Создайте новый или скопируйте готовый конфиг в корень.
 4. Запустите.
@@ -30,14 +30,14 @@
 Операция в "<...>" опциональна.
 
     Op OpName
-        GUID
-        # Команда LoadGUIDandSaveFreeform поддерживает до 2 модификаторов, но остальные команды только 1.
+        GUID или Cтрока или Число
+        # Команда LoadGUIDandSaveFreeform поддерживает до 2 "параметров", но остальные команды только 1.
         # В зависимости от наличия второго GUID, выбирается режим работы.
         <GUID>
-    <Op Patch>
-        Argument 1
-        Argument 2
-        Argument 3
+    <Op Patch> или <Op FastPatch> 
+        Аргумент 1
+        Аргумент 2
+        Аргумент 3
     <End>
     
     # Если драйвер ещё не в памяти.
@@ -46,8 +46,10 @@
 ### Значение
 
     OpName : Patch, LoadGUIDandSavePE, NonamePE, UninstallProtocol, Compatibility и остальные
-    GUID : GUID драйвера для поиска или протокола
-    Argument 1 : OFFSET, PATTERN, REL_NEG_OFFSET, REL_POS_OFFSET
+    GUID : GUID драйвера или протокола для поиска
+    Строка : Название модуля из UI Section
+    Число : Кол-во строк к пропуску для Op Skip или EFI_HANDLE ID для Op HandleIndex
+    Argument 1 : Offset, Pattern, RelNegOffset, RelPosOffset
     Argument 2 : Модификатор для Argument 1 (например, HEX шаблон)
     Argument 3 : HEX патч
     
@@ -104,20 +106,23 @@
 
 ## Compatibility
 Дает возможность задать фильтрующий протокол во всех функциях поиска. Если указанный GUID случаен, то программа не отвергает его, но на экран выдаются рекомендуемые.
-<details>
-<summary><strong>Выдача рекомендуемых</strong></summary>
+  <details>
+  <summary><strong>Выдача рекомендуемых</strong></summary>
+    
+  ```
+  Recommended protocols are:
+  EFI_FIRMWARE_VOLUME_PROTOCOL_GUID(good for HP Insyde Rev.3)
+  389F751F-1838-4388-8390-CD8154BD27F8
+   
+  EFI_LEGACY_BIOS_PROTOCOL_GUID(good for Aptio 4, Insyde Rev.3)
+  DB9A1E3D-45CB-4ABB-853B-E5387FDB2E2D
+  ```
   
-```
-Recommended protocols are:
-EFI_FIRMWARE_VOLUME_PROTOCOL_GUID(good for HP Insyde Rev.3)
-389F751F-1838-4388-8390-CD8154BD27F8
- 
-EFI_LEGACY_BIOS_PROTOCOL_GUID(good for Aptio 4, Insyde Rev.3)
-DB9A1E3D-45CB-4ABB-853B-E5387FDB2E2D
-```
-
-</details>
+  </details>
 Если Compatibility не использована вообще, SREP работает как обычно. Таким образом организована поддержка Insyde Rev. 3.
+
+## HandleIndex
+Находит загруженные дескрипторы в RAM по их ID из handle dump, который можно получить через команды UEFI shell, а также в SREP.log при первом запуске HandleIndex со случайным параметром.
 
 ## Skip
 Дает возможность пропускать указанное число команд (считаются только Op), если прошлая завершилась с успехом.

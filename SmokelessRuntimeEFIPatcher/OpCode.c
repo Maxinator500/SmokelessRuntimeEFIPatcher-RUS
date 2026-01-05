@@ -1,5 +1,4 @@
 #include "Opcode.h"
-#include "Utility.h"
 
 EFI_STATUS
 FindLoadedImageFromName(
@@ -29,7 +28,7 @@ FindLoadedImageFromName(
         Status = gBS->HandleProtocol(Handles[i], &gEfiLoadedImageProtocolGuid, (VOID **)ImageInfo); //Process every found handle
         if (Status == EFI_SUCCESS)
         {
-            CHAR16 *String = FindLoadedImageFileName(*ImageInfo, FilterProtocol);
+            CHAR16 *String = FindLoadedImageFileNameSREP(*ImageInfo, FilterProtocol);
             if (String != NULL)
             {
                 if (StrCmp(FileName16, String) == 0)  //If SUCCESS, compare the handle' name with the one specified in cfg
@@ -61,7 +60,7 @@ FindLoadedImageFromGUID(
     Status = AsciiStrToGuid(FileGuid, &GUID);
     if (EFI_ERROR(Status))
     {
-      Print(L"%s\"%a\"\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), FileGuid);
+      Print(L"%s\"%a\"\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), FileGuid);
       return Status;
     }
 
@@ -79,7 +78,7 @@ FindLoadedImageFromGUID(
 
     if (Section_Type == EFI_SECTION_TE) {
       if (BufferSize != 0) {
-        Print(L"%s%X\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_TE_HINT), NULL), BufferSize);
+        Print(L"%s%X\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_TE_HINT), NULL), BufferSize);
       }
     }
 
@@ -100,12 +99,53 @@ FindLoadedImageFromGUID(
             {
                 if (FoundSize == BufferSize)  //Compare the found handle' BufferSize with the value we got from FV by looking for guid specified in cfg
                 {
-                    Print(L"%s%X\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_FOUND_LOADED_GUID), NULL), BufferSize);
+                    Print(L"%s%X\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_FOUND_LOADED_GUID), NULL), BufferSize);
                     return EFI_SUCCESS;
                 }
             }
         }
     }
+    return EFI_NOT_FOUND;
+}
+
+EFI_STATUS
+FindLoadedImageFromShellIndex(
+  IN EFI_HANDLE ImageHandle,
+  IN CHAR8 *HandleIndex,
+  OUT EFI_LOADED_IMAGE_PROTOCOL **ImageInfo,
+  OUT EFI_HANDLE **HandleBuffer
+)
+{
+    EFI_STATUS Status;
+    UINTN NumericIndex;
+    EFI_HANDLE TheHandle;
+    //-----------------------------------------------------
+
+    Status = AsciiStrHexToUintnS(HandleIndex, (CHAR8 **)L"\0", &NumericIndex);
+    if (EFI_ERROR(Status))
+    {
+      Print(L"%s\"%a\"\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), HandleIndex);
+      return Status;
+    }
+    Print(L"%s%X\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_HANDLE_INDEX), NULL), NumericIndex);
+
+    EFI_HANDLE *AllHandles = GetHandleListByProtocol(NULL);
+    if (AllHandles == NULL)
+    {
+      gST->ConOut->OutputString(gST->ConOut, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_GET_HANDLE_LIST_FAIL), NULL));
+      return EFI_NOT_FOUND;
+    }
+
+    //Save handles to buffer
+    *HandleBuffer = AllHandles;
+
+    TheHandle = ConvertHandleIndexToHandle(NumericIndex);
+    if (TheHandle != NULL)
+    {
+      Print(L"\n\r%X: 0x%X\n\r", NumericIndex, TheHandle);
+      return gBS->HandleProtocol(TheHandle, &gEfiLoadedImageProtocolGuid, (VOID **)ImageInfo);
+    }
+
     return EFI_NOT_FOUND;
 }
 
@@ -129,7 +169,7 @@ LoadFromFS(
 
     if (EFI_ERROR(Status))
     {
-        gST->ConOut->OutputString(gST->ConOut, HiiGetString(HiiHandle, STRING_TOKEN(STR_NO_HANDLE_WITH_EFISIMPLEFS), NULL));
+        gST->ConOut->OutputString(gST->ConOut, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_NO_HANDLE_WITH_EFISIMPLEFS), NULL));
         return Status;
     }
     DEBUG_CODE(Print(L"Found %d Instances\n\r", NumberOfHandles););
@@ -142,7 +182,7 @@ LoadFromFS(
 
         if (EFI_ERROR(Status))
         {
-            Print(L"%s%r\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_UNSUPPORTED_PROTOCOL), NULL), Status);
+            Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_UNSUPPORTED_PROTOCOL), NULL), Status);
             return Status;
         }
         CHAR16 FileName16[0x100] = {0};
@@ -152,12 +192,12 @@ LoadFromFS(
 
         if (EFI_ERROR(Status))
         {
-            Print(L"%s%d: %r\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_COULD_NOT_LOAD), NULL), Index, Status);
+            Print(L"%s%d: %r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_COULD_NOT_LOAD), NULL), Index, Status);
             continue;
         }
         else
         {
-            Print(L"%s%d\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_SUCCESSFUL_LOAD), NULL), Index);
+            Print(L"%s%d\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_SUCCESSFUL_LOAD), NULL), Index);
             Status = gBS->OpenProtocol(*AppImageHandle, &gEfiLoadedImageProtocolGuid,
                                        (VOID **)ImageInfo, ImageHandle, (VOID *)NULL,
                                        EFI_OPEN_PROTOCOL_GET_PROTOCOL);
@@ -195,7 +235,7 @@ LoadFromFV(
                                    (VOID **)ImageInfo, ImageHandle, (VOID *)NULL,
                                    EFI_OPEN_PROTOCOL_GET_PROTOCOL);
     }
-    Print(L"%s%r\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_LOAD_RESULT), NULL), Status);
+    Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_LOAD_RESULT), NULL), Status);
 
     return Status;
 };
@@ -228,7 +268,7 @@ LoadGUIDandSavePE(
   Status = AsciiStrToGuid(FileGuid, &GUID);
   if (EFI_ERROR(Status))
   {
-    Print(L"%s\"%a\"\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), FileGuid);
+    Print(L"%s\"%a\"\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), FileGuid);
     return Status;
   }
 
@@ -244,7 +284,7 @@ LoadGUIDandSavePE(
 
   //Dumping section
   if (Buffer == NULL) {
-    Print(L"%s%d\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_NULL_DRIVER_BUFFER), NULL), BufferSize);
+    Print(L"%s%d\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_NULL_DRIVER_BUFFER), NULL), BufferSize);
     return EFI_NOT_FOUND;
   }
 
@@ -254,7 +294,7 @@ LoadGUIDandSavePE(
   DumpFile->Write(DumpFile, &BufferSize, (VOID **)Buffer);
   DumpFile->Flush(DumpFile);
 
-  gST->ConOut->OutputString(gST->ConOut, HiiGetString(HiiHandle, STRING_TOKEN(STR_DUMPING), NULL));
+  gST->ConOut->OutputString(gST->ConOut, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_DUMPING), NULL));
 
   Status = gBS->LoadImage(FALSE, ImageHandle, (VOID *)NULL, Buffer, BufferSize, AppImageHandle); //Parse saved buffer to LoadImage BS
   if (Buffer != NULL)
@@ -267,7 +307,7 @@ LoadGUIDandSavePE(
                                 (VOID**)ImageInfo, ImageHandle, (VOID*)NULL,
                                 EFI_OPEN_PROTOCOL_GET_PROTOCOL);
   }
-  Print(L"%s%r\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_LOAD_RESULT), NULL), Status);
+  Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_LOAD_RESULT), NULL), Status);
 
   return Status;
 };
@@ -296,7 +336,7 @@ LoadGUIDandSaveFreeform(
     EFI_FIRMWARE_VOLUME_PROTOCOL *Fv = NULL;
     EFI_FIRMWARE_VOLUME2_PROTOCOL *Fv2 = NULL;
     if (!CompareGuid(&FilterProtocol, &gEfiFirmwareVolumeProtocolGuid)) {
-      gST->ConOut->OutputString(gST->ConOut, HiiGetString(HiiHandle, STRING_TOKEN(STR_DEFAULT_FILTER), NULL));
+      gST->ConOut->OutputString(gST->ConOut, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_DEFAULT_FILTER), NULL));
     }
 
     //Dump related vars
@@ -315,7 +355,7 @@ LoadGUIDandSaveFreeform(
     Status = AsciiStrToGuid(FileGuid, &File);
     if (EFI_ERROR(Status))
     {
-      Print(L"%s\"%a\"\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), FileGuid);
+      Print(L"%s\"%a\"\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), FileGuid);
       return Status;
     }
 
@@ -324,7 +364,7 @@ LoadGUIDandSaveFreeform(
       Status = AsciiStrToGuid(SectionGuid, &Section);
       if (EFI_ERROR(Status))
       {
-        Print(L"%s\"%a\"\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), FileGuid);
+        Print(L"%s\"%a\"\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), FileGuid);
         return Status;
       }
     }
@@ -352,7 +392,7 @@ LoadGUIDandSaveFreeform(
 
     if (EFI_ERROR(Status))
     {
-      Print(L"%s%r\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_NO_HANDLE), NULL), Status);
+      Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_NO_HANDLE), NULL), Status);
 
       return Status;
     }
@@ -434,7 +474,7 @@ LoadGUIDandSaveFreeform(
 
             //RAW sections don't have guid so we don't need doing file search for them
             if (SectionType == EFI_SECTION_FREEFORM_SUBTYPE_GUID) {
-              gST->ConOut->OutputString(gST->ConOut, HiiGetString(HiiHandle, STRING_TOKEN(STR_RETRIEVE_FREEFORM), NULL));
+              gST->ConOut->OutputString(gST->ConOut, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_RETRIEVE_FREEFORM), NULL));
               EFI_GUID *secguid;
 
               //Compare Section GUID, to find correct one..
@@ -463,7 +503,7 @@ LoadGUIDandSaveFreeform(
               FreePool(HandleBuffer);
             }
             if (!EFI_ERROR(Status)){
-                gST->ConOut->OutputString(gST->ConOut, HiiGetString(HiiHandle, STRING_TOKEN(STR_DUMPING), NULL));
+                gST->ConOut->OutputString(gST->ConOut, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_DUMPING), NULL));
                 *Pointer = SectionData;
                 *Size = DataSize;
 
@@ -503,7 +543,7 @@ UninstallProtocol(IN CHAR8 *ProtocolGuid, OUT UINTN Indexes)
    Status = AsciiStrToGuid(ProtocolGuid, &GUID);
    if (EFI_ERROR(Status))
    {
-     Print(L"%s\"%a\"\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), ProtocolGuid);
+     Print(L"%s\"%a\"\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), ProtocolGuid);
      return Status;
    }
 
@@ -511,7 +551,7 @@ UninstallProtocol(IN CHAR8 *ProtocolGuid, OUT UINTN Indexes)
 
   if (EFI_ERROR(Status))
   {
-    Print(L"%s%r\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_NO_HANDLE), NULL), Status);
+    Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_NO_HANDLE), NULL), Status);
 
     return Status;
   } 
@@ -525,7 +565,7 @@ UninstallProtocol(IN CHAR8 *ProtocolGuid, OUT UINTN Indexes)
 
     if (EFI_ERROR(Status))
     {
-      Print(L"%s%d: %r\n\r", HiiGetString(HiiHandle, STRING_TOKEN(STR_FAILED_GETTING_PROTOCOL_POINTER), NULL), i, Status);
+      Print(L"%s%d: %r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_FAILED_GETTING_PROTOCOL_POINTER), NULL), i, Status);
       continue;
     }
 
@@ -535,7 +575,7 @@ UninstallProtocol(IN CHAR8 *ProtocolGuid, OUT UINTN Indexes)
 
     if (EFI_ERROR(Status))
     {
-      Print(L"%r - %s%g,\n    Handle %d\n    Pointer 0x%x\n\r", Status, HiiGetString(HiiHandle, STRING_TOKEN(STR_FAILED_UNINSTALLING), NULL), GUID, i, ProtocolInterface);
+      Print(L"%r - %s%g,\n    Handle %d\n    Pointer 0x%x\n\r", Status, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_FAILED_UNINSTALLING), NULL), GUID, i, ProtocolInterface);
       continue;
     }
     Indexes += 1;

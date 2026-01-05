@@ -1,4 +1,4 @@
-﻿#langdef en-US "Русский"
+#langdef ru-RU "Русский"
 #langdef en-GB "English"
 
 #string STR_RUS_MODE                        #language en-GB  "Russian mode\n\n\r"
@@ -11,208 +11,223 @@
 
 #string STR_LANG_SWITCH_DISABLED            #language en-GB  "Language switch is disabled due to the outdated UEFI shell or driver load!\n\n\r"
 
-#string STR_LANG_VAR_WP                     #language en-GB  "PlatformLang variable doesn't exist or WP! Language switch disabled.\nStatus: "
+#string STR_LANG_VAR_WP                     #language en-GB  "SREPLang variable doesn't exist or WP! Language switch disabled.\nStatus: "
 
-#string STR_PRESS_L                         #language en-US  "Нажмите \"L\" чтобы включить логирование, или ничего не делайте для пропуска\n\r"
+#string STR_PRESS_L                         #language ru-RU  "Нажмите \"L\" чтобы включить логирование, или ничего не делайте для пропуска\n\r"
                                             #language en-GB  "Press \"L\" key to enable logging, or wait several seconds to leave it disabled\n\r"
 
-#string STR_LAUNCHED                        #language en-US  "SREP запущен\n\r"
+#string STR_LAUNCHED                        #language ru-RU  "SREP запущен\n\r"
                                             #language en-GB  "SREP launched\n\r"
 
-#string STR_DEL_LOG                         #language en-US  "Старый лог был удалён\n\r"
+#string STR_DEL_LOG                         #language ru-RU  "Старый лог был удалён\n\r"
                                             #language en-GB  "The old log has been deleted\n\r"
 
-#string STR_FAILED_REGEX                    #language en-US  "Зависимости не найдены: RegularExpressionProtocol\nУбедитесь что файл Oniguruma.efi доступен\n\r"
-                                            #language en-GB  "Failed on Locating RegularExpressionProtocol\n\r"
+#string STR_FAILED_REGEX                    #language ru-RU  "Зависимости не найдены: RegularExpressionProtocol\nУбедитесь что файл Oniguruma.efi доступен\n\r"
+                                            #language en-GB  "Failed on Locating RegularExpressionProtocol\nMake sure Oniguruma.efi is available on FS\n\r"
 
-#string STR_LOG_CANCEL                      #language en-US  "Логирование отменено\n\r"
+#string STR_FAILED_REGEX2                   #language ru-RU  " Op отключено поскольку не найден RegularExpressionProtocol\nпопробуйте использовать - "
+                                            #language en-GB  " Op is disabled due to the missing RegularExpressionProtocol\nconsider using - "
+
+#string STR_LOG_CANCEL                      #language ru-RU  "Логирование отменено\n\r"
                                             #language en-GB  "Logging has been canceled\n\r"
 
-#string STR_LOG_OPEN_FAIL                   #language en-US  "Не удалось подготовить логирование.\nУбедитесь что накопитель в формате FAT\n\r"
+#string STR_LOG_OPEN_FAIL                   #language ru-RU  "Не удалось подготовить логирование.\nУбедитесь что накопитель в формате FAT\n\r"
                                             #language en-GB  "Failed on opening log file\n\r"
 
-#string STR_CFG_SEARCH_FAIL                 #language en-US  "Не удалось найти файл конфига\n\r"
+#string STR_CFG_SEARCH_FAIL                 #language ru-RU  "Не удалось найти файл конфига\n\r"
                                             #language en-GB  "Failed on searching for config file\n\r"                                    
 
-#string STR_CFG_OPEN_FAIL                   #language en-US  "Не удалось открыть файл конфига\n\r"
+#string STR_CFG_OPEN_FAIL                   #language ru-RU  "Не удалось открыть файл конфига\n\r"
                                             #language en-GB  "Failed on opening cfg file\n\r"
 
-#string STR_CFG_SIZE                        #language en-US  "Размер конфига в HEX: 0x"
+#string STR_CFG_FOUND                       #language ru-RU  "Файл конфига: "
+                                            #language en-GB  "Found config file: "
+
+#string STR_CFG_SIZE                        #language ru-RU  "Размер конфига в HEX: 0x"
                                             #language en-GB  "Config size in HEX: 0x"
 
-#string STR_PARSING                         #language en-US  "Начало обработки данных\n\rСтираем ненужные переносы строк\n\r"
+#string STR_PARSING                         #language ru-RU  "Начало обработки данных\n\rСтираем ненужные переносы строк\n\r"
                                             #language en-GB  "Parsing Config\n\rStripping NewLine, Carriage and Return\n\r"
 
-#string STR_CURRENT_LINE                    #language en-US  "В данный момент обрабатываем строку "
+#string STR_CURRENT_LINE                    #language ru-RU  "В данный момент обрабатываем строку "
                                             #language en-GB  "Current parsing "
 
-#string STR_COMMAND                         #language en-US  "Команда "
+#string STR_COMMAND                         #language ru-RU  "Команда "
                                             #language en-GB  "Command "
 
-#string STR_OP_END                          #language en-US  "Обнаружена команда End, операции над дескриптором доб. в очередь\n\r"
+#string STR_OP_END                          #language ru-RU  "Обнаружена команда End, операции над дескриптором доб. в очередь\n\r"
                                             #language en-GB  "Op End detected\n\r"
 
-#string STR_OP_EXEC                         #language en-US  "Обнаружена команда Exec, запуск приложения доб. в очередь\n\r"
+#string STR_OP_EXEC                         #language ru-RU  "Обнаружена команда Exec, запуск приложения доб. в очередь\n\r"
                                             #language en-GB  "Op Exec detected\n\r"
 
-#string STR_OP_SKIP                         #language en-US  "Обнаружена команда Skip\n\r"
+#string STR_OP_SKIP                         #language ru-RU  "Обнаружена команда Skip\n\r"
                                             #language en-GB  "Op Skip detected\n\r"
 
-#string STR_OP_SKIP_SUPPORTED               #language en-US  "В случае успеха предыдущей,\nбудет выполнен переход на указанное кол-во команд вперёд\n\r"
+#string STR_OP_SKIP_SUPPORTED               #language ru-RU  "В случае успеха предыдущей,\nбудет выполнен переход на указанное кол-во команд вперёд\n\r"
                                             #language en-GB  "If the previous Op succeeds,\nskip will be performed\n\r"
 
-#string STR_OP_SKIP_UNSUPPORTED             #language en-US  "Но предыдущая Op не поддерживает эту команду, поэтому пропуск не случится\n\r"
+#string STR_OP_SKIP_UNSUPPORTED             #language ru-RU  "Но предыдущая Op не поддерживает эту команду, поэтому пропуск не случится\n\r"
                                             #language en-GB  "But the previous Op doesn't support \"Op Skip\", so nothing's going to happen\n\r"
 
-#string STR_INACTIVE_OP                     #language en-US  "Я закомментировал эту команду, сейчас она не сработает\n\r"
+#string STR_INACTIVE_OP                     #language ru-RU  "Я закомментировал эту команду, сейчас она не сработает\n\r"
                                             #language en-GB  "I commented out this Op, you can't use it\n\r"
 
-#string STR_INVALID_OP                      #language en-US  "Следующая команда неверна: "
+#string STR_INVALID_OP                      #language ru-RU  "Следующая команда неверна: "
                                             #language en-GB  "The following command is invalid: "
 
-#string STR_FOUND_NAME_INPUT                #language en-US  "Обнаружен ввод названия: "
+#string STR_FOUND_NAME_INPUT                #language ru-RU  "Обнаружен ввод названия: "
                                             #language en-GB  "Found file name input: "
 
-#string STR_FOUND_GUID_INPUT                #language en-US  "Обнаружен ввод NameGuid: "
+#string STR_FOUND_GUID_INPUT                #language ru-RU  "Обнаружен ввод NameGuid: "
                                             #language en-GB  "Found NameGuid input: "
 
-#string STR_RAW_GUID_INPUT                  #language en-US  "Freeform Section Subtype GUID не указан,\nвместо этого ищем секцию RAW\n\r"
+#string STR_RAW_GUID_INPUT                  #language ru-RU  "Freeform Section Subtype GUID не указан,\nвместо этого ищем секцию RAW\n\r"
                                             #language en-GB  "Freeform Section Subtype GUID not specified, \nlooking for RAW instead\n\r"
 
-#string STR_SECTION_GUID_INPUT              #language en-US  "Ввод SectionGuid: "
+#string STR_SECTION_GUID_INPUT              #language ru-RU  "Ввод SectionGuid: "
                                             #language en-GB  "SectionGuid input: "
 
-#string STR_ARG_OFFSET                      #language en-US  "Смещение получено\n\r"
+#string STR_ARG_OFFSET                      #language ru-RU  "Смещение получено\n\r"
                                             #language en-GB  "Found Offset\n\r"
 
-#string STR_ARG_PATTERN                     #language en-US  "Шаблон получен\n\r"
+#string STR_ARG_PATTERN                     #language ru-RU  "Шаблон получен\n\r"
                                             #language en-GB  "Found Pattern\n\r"
 
-#string STR_ARG_OFFSET_DECODED              #language en-US  "Смещение посчитано\n\r"
+#string STR_ARG_OFFSET_DECODED              #language ru-RU  "Смещение посчитано\n\r"
                                             #language en-GB  "Offset decoded\n\r"
 
-#string STR_PATTERN_SIZE                    #language en-US  "\rРазмер шаблона: 0x"
+#string STR_PATTERN_SIZE                    #language ru-RU  "\rРазмер шаблона: 0x"
                                             #language en-GB  "\rPattern size: 0x"
 
-#string STR_PATCH_SIZE                      #language en-US  "\rРазмер патча: 0x"
+#string STR_PATCH_SIZE                      #language ru-RU  "\rРазмер патча: 0x"
                                             #language en-GB  "\rPatch size: 0x"
 
-#string STR_PATCH_PENDING                   #language en-US  "Патч добавлен в очередь\n\r"
+#string STR_PATCH_PENDING                   #language ru-RU  "Патч добавлен в очередь\n\r"
                                             #language en-GB  "Patch was set for execution\n\r"
 
-#string STR_BASIC_CASE                      #language en-US  "Выполняется аргумент "
+#string STR_BASIC_CASE                      #language ru-RU  "Выполняется аргумент "
                                             #language en-GB  "Executing "
 
-#string STR_SEARCH_RESULT                   #language en-US  "Результат попытки поиска: "
+#string STR_SEARCH_RESULT                   #language ru-RU  "Результат попытки поиска: "
                                             #language en-GB  "Search result: "
 
-#string STR_SECTION_BASENSIZE               #language en-US  "Смещение и размер секции: "
+#string STR_SECTION_BASENSIZE               #language ru-RU  "Смещение и размер секции: "
                                             #language en-GB  "Section Base and Size: "
 
-#string STR_BIN_SIZE                        #language en-US  "Размер целевого, последнего загруженного драйвера в HEX: 0x"
+#string STR_BIN_SIZE                        #language ru-RU  "Размер целевого, последнего загруженного драйвера в HEX: 0x"
                                             #language en-GB  "Patching Image Size: 0x"
 
-#string STR_PATTERN_SEARCH                  #language en-US  "Поиск шаблона\n\r
+#string STR_PATTERN_SEARCH                  #language ru-RU  "Поиск шаблона\n\r
                                             #language en-GB  "Searching Pattern\n\r"
 
-#string STR_PATTERN_NOT_FOUND               #language en-US  "Шаблон не найден\n\r
+#string STR_PATTERN_NOT_FOUND               #language ru-RU  "Шаблон не найден\n\r
                                             #language en-GB  "Pattern not found\n\r"
 
-#string STR_REL_POS_OFFSET                  #language en-US  "Поиск смещения вперёд\n\r"
+#string STR_REL_POS_OFFSET                  #language ru-RU  "Поиск смещения вперёд\n\r"
                                             #language en-GB  "Going forward\n\r"
 
-#string STR_REL_NEG_OFFSET                  #language en-US  "Поиск смещения назад\n\r"
+#string STR_REL_NEG_OFFSET                  #language ru-RU  "Поиск смещения назад\n\r"
                                             #language en-GB  "Going backwards\n\r"
 
-#string STR_MATCH_OFFSET                    #language en-US  "Смещение в секции: 0x"
+#string STR_MATCH_OFFSET                    #language ru-RU  "Смещение в секции: 0x"
                                             #language en-GB  "Offset in section: 0x"
 
-#string STR_PATCHED                         #language en-US  "Патч выполнен\n\r"
+#string STR_PATCHED                         #language ru-RU  "Патч выполнен\n\r"
                                             #language en-GB  "Patched\n\r"
 
-#string STR_NOT_PATCHED                     #language en-US  "Патч провалился\n\r"
+#string STR_NOT_PATCHED                     #language ru-RU  "Патч провалился\n\r"
                                             #language en-GB  "Not patched\n\r"
 
-#string STR_PATTERN_TOO_BIG                 #language en-US  "Шаблон превышает макс. размер в 200h знаков: "
+#string STR_PATTERN_TOO_BIG                 #language ru-RU  "Шаблон превышает макс. размер в 200h знаков: "
                                             #language en-GB  "The pattern exceeds the maximum size of 200h chars: "
 
-#string STR_STANDBY                         #language en-US  "Найдено\n\rЖдите...\n\r"
+#string STR_STANDBY                         #language ru-RU  "Найдено\n\rЖдите...\n\r"
                                             #language en-GB  "Found\n\rPlease, standby...\n\r"
 
-#string STR_FOUND_INSTANCES                 #language en-US  "^ Поиск строки ^\n\r\rНайденные места:\n\r"
+#string STR_FOUND_INSTANCES                 #language ru-RU  "^ Поиск строки ^\n\r\rНайденные места:\n\r"
                                             #language en-GB  "^ Search string ^\n\r\rFound patterns:\n\r"
 
-#string STR_ANOTHER_MATCH                   #language en-US  "Найдено ещё одно совпадение\n\r"
+#string STR_ANOTHER_MATCH                   #language ru-RU  "Найдено ещё одно совпадение\n\r"
                                             #language en-GB  "Found another match\n\r"
 
-#string STR_TOTAL_MATCHES                   #language en-US  "Доп. совпадений с шаблоном: "
+#string STR_TOTAL_MATCHES                   #language ru-RU  "Доп. совпадений с шаблоном: "
                                             #language en-GB  "Additional matches for pattern: "
 
-#string STR_NEXT_OFFSET                     #language en-US  " смещение в RAM: 0x"
+#string STR_NEXT_OFFSET                     #language ru-RU  " смещение в RAM: 0x"
                                             #language en-GB  " offset in RAM: 0x"
 
-#string STR_LOAD_RESULT                     #language en-US  "Драйвер сообщил: "
+#string STR_LOAD_RESULT                     #language ru-RU  "Драйвер сообщил: "
                                             #language en-GB  "Image Returned: "
 
-#string STR_CASE_SKIP                       #language en-US  "Пропускаем "
+#string STR_CASE_SKIP                       #language ru-RU  "Пропускаем "
                                             #language en-GB  "Skipping "
 
-#string STR_LAST_STATUS                     #language en-US  "Переход не случился, прошлая команда вернула: "
+#string STR_LAST_STATUS                     #language ru-RU  "Переход не случился, прошлая команда вернула: "
                                             #language en-GB  "Skip did not happened, last command returned: "
 
-#string STR_BREAKING_CAUSE                  #language en-US  "Причина остановки: "
+#string STR_BREAKING_CAUSE                  #language ru-RU  "Причина остановки: "
                                             #language en-GB  "Breaking cause: "
 
-#string STR_PROTOCOL_UNINSTALLED            #language en-US  "Протокол удален\n\r"
+#string STR_PROTOCOL_UNINSTALLED            #language ru-RU  "Протокол удален\n\r"
                                             #language en-GB  "Protocol uninstalled\n\r"
 
-#string STR_RECOMMENDED_PROTOCOLS           #language en-US  "Рекомендуемые протоколы:\nEFI_FIRMWARE_VOLUME_PROTOCOL_GUID(good for HP Insyde Rev.3)\n389F751F-1838-4388-8390-CD8154BD27F8\n\nEFI_LEGACY_BIOS_PROTOCOL_GUID(good for Aptio 4, Insyde Rev.3)\nDB9A1E3D-45CB-4ABB-853B-E5387FDB2E2D\n\n\r"
+#string STR_RECOMMENDED_PROTOCOLS           #language ru-RU  "Рекомендуемые протоколы:\nEFI_FIRMWARE_VOLUME_PROTOCOL_GUID(good for HP Insyde Rev.3)\n389F751F-1838-4388-8390-CD8154BD27F8\n\nEFI_LEGACY_BIOS_PROTOCOL_GUID(good for Aptio 4, Insyde Rev.3)\nDB9A1E3D-45CB-4ABB-853B-E5387FDB2E2D\n\n\r"
                                             #language en-GB  "Recommended protocols are:\nEFI_FIRMWARE_VOLUME_PROTOCOL_GUID(good for HP Insyde Rev.3)\n389F751F-1838-4388-8390-CD8154BD27F8\n\nEFI_LEGACY_BIOS_PROTOCOL_GUID(good for Aptio 4, Insyde Rev.3)\nDB9A1E3D-45CB-4ABB-853B-E5387FDB2E2D\n\n\r"
 
-#string STR_CONVERTATION_FAILED             #language en-US  "Не удалось строку сконвертировать в GUID: "
-                                            #language en-GB  "Failed converting input string to GUID: "
+#string STR_CONVERTATION_FAILED             #language ru-RU  "Не удалось сконвертировать строку: "
+                                            #language en-GB  "Failed converting input string: "
 
-#string STR_CURRENT_FILTER                  #language en-US  "Фильтрация по протоколу: "
+#string STR_CURRENT_FILTER                  #language ru-RU  "Фильтрация по протоколу: "
                                             #language en-GB  "Now filtering Handles by protocol: "
 
-#string STR_NO_HANDLE                       #language en-US  "Не удалось найти ни одного дескриптора с указанным протоколом\n\r"
+#string STR_NO_HANDLE                       #language ru-RU  "Не удалось найти ни одного дескриптора с указанным протоколом\n\r"
                                             #language en-GB  "Сould not find any handle with the specified protocol\n\r"
 
-#string STR_TE_HINT                         #language en-US  "Хотя в БИОС нашлась нужная секция,\nSREP может быть не способен найти TE в RAM если модификатор Op Compatibility не подходит. Размер секции: 0x"
+#string STR_TE_HINT                         #language ru-RU  "Хотя в БИОС нашлась нужная секция,\nSREP может быть не способен найти TE в RAM если модификатор Op Compatibility не подходит. Размер секции: 0x"
                                             #language en-GB  "Although the section was found in BIOS,\nSREP may not be able to find TE in RAM if Op Compatibility modifier is bad. Section size: 0x"
 
-#string STR_FOUND_LOADED_GUID               #language en-US  "Найдена секция размера: 0x"
+#string STR_FOUND_LOADED_GUID               #language ru-RU  "Найдена секция размера: 0x"
                                             #language en-GB  "Found handle of size: 0x"
 
-#string STR_NO_HANDLE_WITH_EFISIMPLEFS      #language en-US  "Не удалось найти ни одного дескриптора с\n поддержкой EfiSimpleFileSystemProtocol\n\r"
+#string STR_NO_HANDLE_WITH_EFISIMPLEFS      #language ru-RU  "Не удалось найти ни одного дескриптора с\nподдержкой EfiSimpleFileSystemProtocol\n\r"
                                             #language en-GB  "Could not find any handle on EfiSimpleFileSystemProtocol\n\r"
 
-#string STR_UNSUPPORTED_PROTOCOL            #language en-US  "Протокол не поддерживается: "
+#string STR_UNSUPPORTED_PROTOCOL            #language ru-RU  "Протокол не поддерживается: "
                                             #language en-GB  "Protocol is not supported: "
 
-#string STR_COULD_NOT_LOAD                  #language en-US  "Не удалось загрузить драйвер по дескриптору "
+#string STR_COULD_NOT_LOAD                  #language ru-RU  "Не удалось загрузить драйвер по дескриптору "
                                             #language en-GB  "Could not load the image on Handle "
 
-#string STR_SUCCESSFUL_LOAD                 #language en-US  "Успешно загружен драйвер по дескриптору "
+#string STR_SUCCESSFUL_LOAD                 #language ru-RU  "Успешно загружен драйвер по дескриптору "
                                             #language en-GB  "Loaded the image with success on Handle "
 
-#string STR_NULL_DRIVER_BUFFER              #language en-US  "Размер указанного драйвера слишком мал: "
+#string STR_NULL_DRIVER_BUFFER              #language ru-RU  "Размер указанного драйвера слишком мал: "
                                             #language en-GB  "Buffer of the specified driver is too small: "
 
-#string STR_DUMPING                         #language en-US  "Создаем дамп секции на накопителе,\nэто должно занять не более 3 сек.\nИначе, UEFI не поддерживается.\n\r"
+#string STR_DUMPING                         #language ru-RU  "Создаем дамп секции на накопителе,\nэто должно занять не более 3 сек.\nИначе, UEFI не поддерживается.\n\r"
                                             #language en-GB  "Creating section dump on FS,\nthis shouldn't take more than 3 secs.\nOtherwise, UEFI system unsupported.\n\r"
 
-#string STR_DEFAULT_FILTER                  #language en-US  "Поиск будет выполнен через EfiFirmwareVolume2Protocol\n\r"
+#string STR_DEFAULT_FILTER                  #language ru-RU  "Поиск будет выполнен через EfiFirmwareVolume2Protocol\n\r"
                                             #language en-GB  "Going to search with EfiFirmwareVolume2Protocol\n\r"
 
-#string STR_RETRIEVE_FREEFORM               #language en-US  "Пытаемся найти секцию FREEFORM в файле\n\r"
+#string STR_RETRIEVE_FREEFORM               #language ru-RU  "Пытаемся найти секцию FREEFORM в файле\n\r"
                                             #language en-GB  "Trying to retrieve FREEFORM section from file\n\r"
 
-#string STR_FAILED_GETTING_PROTOCOL_POINTER #language en-US  "Не удалось получить смещение указателя на протокол от дескриптора "
+#string STR_FAILED_GETTING_PROTOCOL_POINTER #language ru-RU  "Не удалось получить смещение указателя на протокол от дескриптора "
                                             #language en-GB  "Failed to retrieve protocol interface of Handle "
 
-#string STR_FAILED_UNINSTALLING             #language en-US  "Не удалось удалить протокол: "
+#string STR_FAILED_UNINSTALLING             #language ru-RU  "Не удалось удалить протокол: "
                                             #language en-GB  "Could not uninstall protocol: "
 
-#string STR_PROGRAM_END                     #language en-US  "\nКонец программы\n\r"
+#string STR_PROGRAM_END                     #language ru-RU  "\nКонец программы\n\r"
                                             #language en-GB  "\nProgram has ended\n\r"
+
+#string STR_HANDLE_INDEX                    #language ru-RU  "Обрабатываем новый дескриптор с индексом "
+                                            #language en-GB  "Parsing new handle using index "
+
+#string STR_GET_HANDLE_LIST_FAIL            #language ru-RU  "Выделение памяти не удалось или ProtocolGuids равно NULL\n\r"
+                                            #language en-GB  "Memory allocation failed or ProtocolGuids is NULL\n\r"
+
+#string STR_HANDLE_DUMP                     #language ru-RU  "Список дескрипторов:\n\r"
+                                            #language en-GB  "Verbose handle list:\n\r"
