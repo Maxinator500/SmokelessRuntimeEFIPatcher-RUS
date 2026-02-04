@@ -132,7 +132,7 @@ FindLoadedImageFromShellIndex(
     EFI_HANDLE *AllHandles = GetHandleListByProtocol(NULL);
     if (AllHandles == NULL)
     {
-      gST->ConOut->OutputString(gST->ConOut, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_GET_HANDLE_LIST_FAIL), NULL));
+      Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_GET_HANDLE_LIST_FAIL), NULL));
       return EFI_NOT_FOUND;
     }
 
@@ -169,7 +169,7 @@ LoadFromFS(
 
     if (EFI_ERROR(Status))
     {
-        gST->ConOut->OutputString(gST->ConOut, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_NO_HANDLE_WITH_EFISIMPLEFS), NULL));
+        Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_NO_HANDLE_WITH_EFISIMPLEFS), NULL));
         return Status;
     }
     DEBUG_CODE(Print(L"Found %d Instances\n\r", NumberOfHandles););
@@ -294,7 +294,7 @@ LoadGUIDandSavePE(
   DumpFile->Write(DumpFile, &BufferSize, (VOID **)Buffer);
   DumpFile->Flush(DumpFile);
 
-  gST->ConOut->OutputString(gST->ConOut, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_DUMPING), NULL));
+  Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_DUMPING), NULL));
 
   Status = gBS->LoadImage(FALSE, ImageHandle, (VOID *)NULL, Buffer, BufferSize, AppImageHandle); //Parse saved buffer to LoadImage BS
   if (Buffer != NULL)
@@ -336,7 +336,7 @@ LoadGUIDandSaveFreeform(
     EFI_FIRMWARE_VOLUME_PROTOCOL *Fv = NULL;
     EFI_FIRMWARE_VOLUME2_PROTOCOL *Fv2 = NULL;
     if (!CompareGuid(&FilterProtocol, &gEfiFirmwareVolumeProtocolGuid)) {
-      gST->ConOut->OutputString(gST->ConOut, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_DEFAULT_FILTER), NULL));
+      Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_DEFAULT_FILTER), NULL));
     }
 
     //Dump related vars
@@ -474,7 +474,7 @@ LoadGUIDandSaveFreeform(
 
             //RAW sections don't have guid so we don't need doing file search for them
             if (SectionType == EFI_SECTION_FREEFORM_SUBTYPE_GUID) {
-              gST->ConOut->OutputString(gST->ConOut, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_RETRIEVE_FREEFORM), NULL));
+              Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_RETRIEVE_FREEFORM), NULL));
               EFI_GUID *secguid;
 
               //Compare Section GUID, to find correct one..
@@ -503,7 +503,7 @@ LoadGUIDandSaveFreeform(
               FreePool(HandleBuffer);
             }
             if (!EFI_ERROR(Status)){
-                gST->ConOut->OutputString(gST->ConOut, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_DUMPING), NULL));
+                Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_DUMPING), NULL));
                 *Pointer = SectionData;
                 *Size = DataSize;
 
@@ -583,6 +583,7 @@ UninstallProtocol(IN CHAR8 *ProtocolGuid, OUT UINTN Indexes)
   return Status;
 }
 
+//Unused
 UINTN
 GetAptioHiiDB(IN BOOLEAN BufferSizeOrPointer)
 {
@@ -623,4 +624,128 @@ GetAptioHiiDB(IN BOOLEAN BufferSizeOrPointer)
     return Result;
   }
   return 0;
+}
+
+EFI_STATUS
+UpdateHandlePackageList(
+  IN EFI_HANDLE ImageHandle,
+  IN CHAR8 *PackageGuid,
+  IN CHAR8 *PackageSize OPTIONAL,
+  OUT EFI_LOADED_IMAGE_PROTOCOL *ImageInfo
+)
+{
+  #define MAX_UINT28 ((UINT32)0xFFFFFFF)
+  EFI_STATUS Status;
+  EFI_HANDLE *DriverHandleBuffer = NULL;
+  EFI_HII_HANDLE *HiiHandleBuffer = NULL;
+  EFI_HII_PACKAGE_LIST_HEADER *PackageList = NULL;
+  UINTN BufferSize = 0;
+  UINTN DriverHandleNumber = 0;
+
+  EFI_GUID GUID = { 0 };
+  Status = AsciiStrToGuid(PackageGuid, &GUID);
+  if (EFI_ERROR(Status))
+  {
+    Print(L"%s\"%a\"\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), PackageGuid);
+    return Status;
+  }
+
+  //
+  //Find the required Driver Handle out of all by comparing ImageInfo
+  //
+  Status = gBS->LocateHandle(ByProtocol, &gEfiLoadedImageProtocolGuid, NULL, &DriverHandleNumber, NULL);
+  if (Status == EFI_BUFFER_TOO_SMALL)
+  {
+    DriverHandleBuffer = AllocateZeroPool(DriverHandleNumber * sizeof(EFI_HANDLE));
+    Status = gBS->LocateHandle(ByProtocol, &gEfiLoadedImageProtocolGuid, NULL, &DriverHandleNumber, DriverHandleBuffer);
+  }
+
+  DEBUG_CODE(
+    //Debug
+    Print(L"Locate driver handles %X status: %r\n\r", DriverHandleNumber, Status);
+  );
+
+
+  //
+  //Locate HII database, retrieve all HII packages to HiiHandleBuffer
+  //
+  Status = gBS->LocateProtocol(&gEfiHiiDatabaseProtocolGuid, NULL, (VOID **)&gHiiDatabase);
+  if (EFI_ERROR(Status)) {
+    Print(L"Unable to locate HII Database!\n\r");
+    return EFI_NOT_STARTED;
+  }
+
+  DEBUG_CODE(
+    //Debug
+    Print(L"Locate HiiDb status %r\n\r", Status);
+  );
+
+  Status = gHiiDatabase->ListPackageLists(gHiiDatabase, EFI_HII_PACKAGE_TYPE_ALL, NULL, &BufferSize, HiiHandleBuffer);
+
+  DEBUG_CODE(
+    //Debug
+    Print(L"HiiHandle instances: %X\n\r", BufferSize / sizeof(EFI_HII_HANDLE));
+  );
+
+  if (EFI_ERROR(Status) && Status != EFI_BUFFER_TOO_SMALL)
+  {
+    Print(L"Failed to list HII handles!\n\r");
+    return Status;
+  }
+  else
+  {
+    //Catch not enough memory here, allocate buffer pool
+    HiiHandleBuffer = AllocateZeroPool(BufferSize);
+    if (HiiHandleBuffer == NULL) {
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    //Try again after allocation
+    Status = gHiiDatabase->ListPackageLists(gHiiDatabase, EFI_HII_PACKAGE_TYPE_ALL, NULL, &BufferSize, HiiHandleBuffer);
+  }
+  if (EFI_ERROR(Status))
+  {
+    return Status;
+  }
+  DEBUG_CODE(
+    //Debug
+    Print(L"ListPackageLists status: %r\n\r", Status);
+  );
+
+  //
+  //Try retrieving package list in the HII database by guid
+  //
+  for (UINTN i = 0; i < BufferSize / sizeof(EFI_HII_HANDLE); i++) {
+    PackageList = GetHandlePackageList(HiiHandleBuffer[i]);
+    DEBUG_CODE(
+      //Debug
+      Print(L"Found PackageList: %g of size 0x%X at 0x%X\n\r", PackageList->PackageListGuid, PackageList->PackageLength, PackageList);
+     );
+
+    if (CompareGuid(&GUID, &PackageList->PackageListGuid)) {
+      ImageInfo->ImageBase = PackageList + (UINTN)0x14; //sizeof(EFI_HII_PACKAGE_LIST_HEADER)
+      ImageInfo->ImageSize = PackageList->PackageLength;
+    }
+  }
+
+  if (ImageInfo->ImageBase == 0) {
+    return EFI_NOT_FOUND;
+  }
+  else
+  {
+    if (PackageSize != 0) {
+      UINTN PackageSizeUintn = 0;
+      AsciiStrHexToUintnS(PackageSize, NULL, &PackageSizeUintn);
+      PackageSizeUintn = PackageSizeUintn > MAX_UINT28 ? MAX_UINT28 : PackageSizeUintn;
+
+      ImageInfo->ImageSize = PackageSizeUintn;
+    }
+  }
+  
+  if (DriverHandleBuffer != NULL) {
+    FreePool(DriverHandleBuffer);
+    FreePool(HiiHandleBuffer);
+  }
+
+  return EFI_SUCCESS;
 }

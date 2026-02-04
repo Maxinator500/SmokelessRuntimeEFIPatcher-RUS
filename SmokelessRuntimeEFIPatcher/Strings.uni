@@ -79,8 +79,14 @@
 #string STR_FOUND_NAME_INPUT                #language ru-RU  "Обнаружен ввод названия: "
                                             #language en-GB  "Found file name input: "
 
-#string STR_FOUND_GUID_INPUT                #language ru-RU  "Обнаружен ввод NameGuid: "
-                                            #language en-GB  "Found NameGuid input: "
+#string STR_FOUND_GUID_INPUT                #language ru-RU  "Обнаружен ввод Guid: "
+                                            #language en-GB  "Found Guid input: "
+
+#string STR_PACKAGE_GUID_INPUT              #language ru-RU  "Пользовательский размер для HII Package не указан, выбираем автоматически\n\r"
+                                            #language en-GB  "Custom size for HII Package not specified, proceeding with normal one\n\r"
+
+#string STR_PACKAGE_SIZE_INPUT              #language ru-RU  "Ввод размера HII Package: "
+                                            #language en-GB  "HII Package size input: "
 
 #string STR_RAW_GUID_INPUT                  #language ru-RU  "Freeform Section Subtype GUID не указан,\nвместо этого ищем секцию RAW\n\r"
                                             #language en-GB  "Freeform Section Subtype GUID not specified, \nlooking for RAW instead\n\r"
@@ -231,3 +237,9 @@
 
 #string STR_HANDLE_DUMP                     #language ru-RU  "Список дескрипторов:\n\r"
                                             #language en-GB  "Verbose handle list:\n\r"
+
+#string STR_PACK_NOT_FOUND                  #language ru-RU  "Указанный HII Database package не найден или ещё не опубликован\n\r"
+                                            #language en-GB  "The specified HII Database package is not published yet or doesn't exist\n\r"
+
+#string STR_PACK_FAILED                     #language ru-RU  "Не удалось найти HII Database package: "
+                                            #language en-GB  "Failed locating HII Database package: "

@@ -72,3 +72,11 @@ EFI_STATUS UninstallProtocol(
 UINTN GetAptioHiiDB(
   IN BOOLEAN BufferSizeOrPointer
 );
+
+EFI_STATUS
+UpdateHandlePackageList(
+  IN EFI_HANDLE ImageHandle,
+  IN CHAR8 *PackageGuid,
+  IN CHAR8 *PackageSize OPTIONAL,
+  OUT EFI_LOADED_IMAGE_PROTOCOL *ImageInfo
+);

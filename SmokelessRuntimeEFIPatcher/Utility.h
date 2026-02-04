@@ -94,14 +94,18 @@ EFI_STATUS RegexMatch(
 
 //Copy from HandleParsingLib
 EFI_STRING HiiGetStringSREP(
-  IN EFI_HII_HANDLE  HiiHandle,
-  IN EFI_STRING_ID   StringId,
+  IN EFI_HII_HANDLE HiiHandle,
+  IN EFI_STRING_ID StringId,
   IN CONST CHAR8 *Language  OPTIONAL
 );
 
-CHAR16 *
-LoadedImageProtocolDumpFilePath(
-  IN CONST EFI_HANDLE  TheHandle
+//Copy from HandleParsingLib
+CHAR16 *LoadedImageProtocolDumpFilePath(
+  IN CONST EFI_HANDLE TheHandle
+);
+
+EFI_HII_PACKAGE_LIST_HEADER *GetHandlePackageList(
+  IN CONST EFI_HII_HANDLE ImageHandle
 );
 
 UINT8 *FindBaseAddressFromName(

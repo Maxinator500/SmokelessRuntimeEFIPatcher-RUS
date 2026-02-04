@@ -6,7 +6,7 @@
 * Появился Рус перевод для сообщений на экране и в логе, вывод в лог был приспособлен для кодировки Unicode. Сами сообщения учащены, чтобы прогресс выполнения лучше отслеживался, и у пользователя не возникало мысли что программа зависла.
   </br>Переключение на Анг доступно через аргумент ENG (например, "SREP.efi ENG"). Но, как можно догадаться, тогда вызов SREP нужно осуществить через командную строку в Shell. Разрешается передавать параметр ENG в .nsh.
 * Файл конфига больше не обязан иметь название 'SREP_Config.cfg'. Теперь патчер выбирает в качестве конфига первый найденный файл с расширением '.cfg'.
-* Добавил 7 новых команд: NonamePE, NonameTE, LoadGUIDandSavePE, LoadGUIDandSaveFreeform, UninstallProtocol, Compatibility, Skip, HandleIndex.
+* Добавил 9 новых команд: NonamePE, NonameTE, LoadGUIDandSavePE, LoadGUIDandSaveFreeform, UninstallProtocol, Compatibility, Skip, HandleIndex, UpdateHiiPackage.
   </br>В каких случаях могут быть полезны - далее.
 * Добавил поддержку абстрактных знаков (regex) для использования в строке шаблона. Классы знаков доступны [по ссылке](https://gist.github.com/kaigouthro/e8bad6a2c8df6ff13b8716027a172dc0#3-character-types).
 * По умолчанию, комбинация Patch - Pattern теперь заменяет все вхождения, а не только первое, которые соответствуют указанному шаблону.
@@ -27,13 +27,13 @@
 4. Запустите.
 
 # Синтаксис для каждой из новых команд (с примерами)
-Операция в "<...>" опциональна.
+Операция в "<...>" опциональна. Некоторые команды не требуют доп. параметров для работы (например, Exec).
 
-    Op OpName
-        GUID или Cтрока или Число
-        # Команда LoadGUIDandSaveFreeform поддерживает до 2 "параметров", но остальные команды только 1.
-        # В зависимости от наличия второго GUID, выбирается режим работы.
-        <GUID>
+    Op Название команды
+        <GUID или Cтрока или Число>
+        # Команды LoadGUIDandSaveFreeform и UpdateHiiPackage поддерживают до 2 "параметров".
+        # В зависимости от наличия второго, выбирается режим работы.
+        <GUID или Cтрока или Число>
     <Op Patch> или <Op FastPatch> 
         Аргумент 1
         Аргумент 2
@@ -45,13 +45,13 @@
 
 ### Значение
 
-    OpName : Patch, LoadGUIDandSavePE, NonamePE, UninstallProtocol, Compatibility и остальные
+    OpName : NonamePE, LoadGUIDandSavePE, UninstallProtocol, Compatibility, Patch и остальные
     GUID : GUID драйвера или протокола для поиска
     Строка : Название модуля из UI Section
-    Число : Кол-во строк к пропуску для Op Skip или EFI_HANDLE ID для Op HandleIndex
-    Argument 1 : Offset, Pattern, RelNegOffset, RelPosOffset
-    Argument 2 : Модификатор для Argument 1 (например, HEX шаблон)
-    Argument 3 : HEX патч
+    Число : Кол-во строк к пропуску для Op Skip, или EFI_HANDLE ID для Op HandleIndex, или пользовательский размер для UpdateHiiPackage
+    Аргумент 1 : Offset, Pattern, RelNegOffset, RelPosOffset для Patch
+    Аргумент 2 : Модификатор для Аргумент 1 (например, HEX шаблон)
+    Аргумент 3 : HEX патч
     
 # Добавленные команды
 ## LoadGUIDandSavePE, LoadGUIDandSaveFreeform
@@ -127,6 +127,23 @@
 ## Skip
 Дает возможность пропускать указанное число команд (считаются только Op), если прошлая завершилась с успехом.
 
+## UpdateHiiDatabase
+Позволяет найти начало HII данных после EFI_HII_PACKAGE_LIST_HEADER, которые выгружены в HII Database у определенного модуля.
+  <details>
+  <summary><strong>UpdateHiiPackage</strong></summary>
+    
+  ```
+  Op UpdateHiiPackage
+  
+  # Это Setup package в HII Database.
+  899407D7-99FE-43D8-9A21-79EC328CAC21
+  
+  # Это переназначение размера package для последующих операций. 
+  A000000
+  ```
+
+  </details>
+
 # Todos
 
     [x] Regex Matching
@@ -136,8 +153,5 @@
     [x] Rework on-screen and log outputs (make separate IFR package for each language)
     [ ] ?
 
-* Regex и Batch Replacement реализованы в tag 0.1.6.
-* UninstallProtocol и Insyde Rev. 3 Support реализованы в tag 0.1.7.
-* Текстовый вывод переработан в tag 0.2.0.
-
 Версии 0.1.6 и 0.1.7 удалены со страницы релизов из-за бага. Он заключался в том, что перед каждой следующей командой патча (Op Patch), массив хранящий смещения найденных вхождений шаблона не очищался. Поэтому самый последний "Op Patch" всегда заменял абсолютно все вхождения, которые были найдены за сеанс работы SREP.
+Релиз 0.2.1 Удален из-за бага Op Patch, при котором абстрактные символы в строке шаблона рассматривались как неподдерживаемые.

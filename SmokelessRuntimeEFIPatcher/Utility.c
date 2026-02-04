@@ -560,6 +560,48 @@ LoadedImageProtocolDumpFilePath (
   return ConvertDevicePathToText(LoadedImage->FilePath, TRUE, TRUE);
 }
 
+EFI_HII_PACKAGE_LIST_HEADER *
+GetHandlePackageList(
+  IN CONST EFI_HII_HANDLE HiiHandle
+)
+{
+  EFI_STATUS Status;
+  EFI_HII_PACKAGE_LIST_HEADER *PackageList = NULL;
+  UINTN BufferSize = 0;
+
+  Status = gHiiDatabase->ExportPackageLists(gHiiDatabase, HiiHandle, &BufferSize, PackageList);
+  if (EFI_ERROR(Status))
+  {
+    //Catch not enough memory here, allocate buffer pool
+    PackageList = AllocateZeroPool(BufferSize);
+    if (PackageList == NULL) {
+      Print(L"Failed to Allocate Pool!\n\r");
+      return NULL;
+    }
+
+    //Try again after allocation
+    Status = gHiiDatabase->ExportPackageLists(gHiiDatabase, HiiHandle, &BufferSize, PackageList);
+  }
+
+  DEBUG_CODE(
+    //Debug
+    Print(L"HII handle %X ExportPackageLists BufferSize: %X, PackageListGuid: %g, status: %r\n\r", HiiHandle, BufferSize, PackageList->PackageListGuid, Status);
+  );
+
+  if (EFI_ERROR(Status))
+  {
+    Print(L"Failed to get HII handle packages!\n\r");
+    if (PackageList != NULL) {
+      FreePool(PackageList);
+    }
+    return NULL;
+  }
+  else
+  {
+    return PackageList;
+  }
+}
+
 //Unused
 UINT8 *
 FindBaseAddressFromName(
