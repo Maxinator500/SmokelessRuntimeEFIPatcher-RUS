@@ -4,14 +4,11 @@
 #include "Opcode.h"
 
 //Specify app version
-#define SREP_VERSION L"0.2.2 RUS"
+#define SREP_VERSION L"0.2.3 RUS"
 
 
-EFI_BOOT_SERVICES *_gBS = NULL;
+EFI_BOOT_SERVICES    *_gBS = NULL;
 EFI_RUNTIME_SERVICES *_gRS = NULL;
-
-EFI_FILE *LogFile = NULL;
-CHAR16 Log[0x200];
 
 //Declare two sets of named constants
 enum
@@ -33,14 +30,15 @@ enum OPCODE
     LOAD_FV,
     LOAD_GUID_PE,
     LOAD_GUID_RAWnFREEFORM,
+    LOAD_HII_FORCE,
     PATCH_FAST,
     PATCH,
     UNINSTALL_PROTOCOL,
     COMPATIBILITY,
     UPDATE_PACK,
     SKIP,
-    GET_DB,
-    EXEC
+    EXEC,
+    SEND_FORM
 };
 
 //Declare data structure for a single operation
@@ -51,6 +49,7 @@ struct OP_DATA
     BOOLEAN Name_Dyn_Alloc, Name2_Dyn_Alloc;
     UINT64 PatchType;             //Pattern, Offset, Rel...
     BOOLEAN PatchType_Dyn_Alloc;
+    INT64 PatchLimit;             //Batch replacement stop value
     INT64 ARG3;                   //Offset
     BOOLEAN ARG3_Dyn_Alloc;
     UINT64 ARG4;                  //Patch length
@@ -67,14 +66,6 @@ struct OP_DATA
     struct OP_DATA *prev;
 };
 
-typedef struct {
-  VOID *BaseAddress;
-  UINTN BufferSize;
-  UINTN Width;
-  UINTN Height;
-  UINTN PixelsPerScanLine;
-} FRAME_BUFFER;
-
 //Writes string from the buffer to SREP.log
 VOID
 LogToFile(IN EFI_FILE *LogFile, IN CHAR16 *String)
@@ -85,9 +76,9 @@ LogToFile(IN EFI_FILE *LogFile, IN CHAR16 *String)
     LogFile->Flush(LogFile);              //Flushes all modified data associated with a file to a device
 }
 
-//Collect OPCODEs from cfg
+//Collect OpCodes from cfg
 static VOID
-Add_OP_CODE(IN struct OP_DATA *Start, IN OUT struct OP_DATA *opCode)
+AddOpCode(IN struct OP_DATA *Start, IN OUT struct OP_DATA *opCode)
 {
     struct OP_DATA *next = Start;
     while (next->next != NULL)
@@ -120,8 +111,8 @@ PrintDump(IN UINT64 Size, IN UINT8 *Dump)
 static VOID
 PrintSearchResult(IN EFI_STATUS Status)
 {
-    Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_SEARCH_RESULT), NULL), Status);
-    UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_SEARCH_RESULT), NULL), Status);
+    Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_SEARCH_RESULT), NULL), Status);
+    UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_SEARCH_RESULT), NULL), Status);
     LogToFile(LogFile, Log);
 }
 
@@ -129,8 +120,8 @@ PrintSearchResult(IN EFI_STATUS Status)
 static VOID
 PrintCase(IN CHAR16 *CaseName)
 {
-    Print(L"%s%s\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_BASIC_CASE), NULL), CaseName);
-    UnicodeSPrint(Log, genericBufferSize, u"%s%s\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_BASIC_CASE), NULL), CaseName);
+    Print(L"%s%s\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_BASIC_CASE), NULL), CaseName);
+    UnicodeSPrint(Log, genericBufferSize, u"%s%s\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_BASIC_CASE), NULL), CaseName);
     LogToFile(LogFile, Log);
 }
 
@@ -166,14 +157,15 @@ CheckArgs(IN EFI_HANDLE ImageHandle) {
   UINTN SREPLangDataSize = 0x6;
   CHAR8 *SREPLangData = AllocatePool(SREPLangDataSize);
   EFI_SHELL_PARAMETERS_PROTOCOL *ShellParameters = NULL;
+
   Status = gBS->HandleProtocol(
     ImageHandle,
     &gEfiShellParametersProtocolGuid,
     (VOID **)&ShellParameters
   );
 
-  Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_SHELL_STATUS), "en-GB"), Status);
-  UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_SHELL_STATUS), "en-GB"), Status);
+  Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_SHELL_STATUS), "en-GB"), Status);
+  UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_SHELL_STATUS), "en-GB"), Status);
 
   GetLangVarStatus = gRT->GetVariable(
     L"SREPLang",
@@ -197,7 +189,7 @@ CheckArgs(IN EFI_HANDLE ImageHandle) {
 
     if (EFI_ERROR(SetLangVarStatus))
     {
-      Print(L"%s%r\n\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_LANG_VAR_WP), "en-GB"), SetLangVarStatus);
+      Print(L"%s%r\n\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_LANG_VAR_WP), "en-GB"), SetLangVarStatus);
       return SetLangVarStatus;
     }
   }
@@ -217,18 +209,18 @@ CheckArgs(IN EFI_HANDLE ImageHandle) {
 
       if (EFI_ERROR(SetLangVarStatus))
       {
-        Print(L"%s%r\n\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_LANG_VAR_WP), "en-GB"), SetLangVarStatus);
+        Print(L"%s%r\n\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_LANG_VAR_WP), "en-GB"), SetLangVarStatus);
         gBS->Stall(3000000);
         return SetLangVarStatus;
       }
 
-      Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_ENG_MODE), "en-GB"));
+      Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_ENG_MODE), "en-GB"));
       return EFI_SUCCESS;
     }
     else
     {
       //Reach this if arg is not "ENG" and there's more than 1
-      Print(L"%s%s\n\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_INVALID_LAUNCH_PARM), "en-GB"), ShellParameters->Argv[1]);
+      Print(L"%s%s\n\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_INVALID_LAUNCH_PARM), "en-GB"), ShellParameters->Argv[1]);
       gBS->Stall(3000000);
       gBS->Exit(ImageHandle, 0, 0, 0);
     }
@@ -236,11 +228,11 @@ CheckArgs(IN EFI_HANDLE ImageHandle) {
   else
   {
     if (EFI_ERROR(Status)) {
-      Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_LANG_SWITCH_DISABLED), "en-GB"));
+      Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_LANG_SWITCH_DISABLED), "en-GB"));
     };
   }
   
-  Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_RUS_MODE), "en-GB"));
+  Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_RUS_MODE), "en-GB"));
   return Status;
 }
 
@@ -259,7 +251,9 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     EFI_FILE *ConfigFile;
     EFI_HII_PACKAGE_LIST_HEADER *PackageList = NULL;
 
-    gBS->SetWatchdogTimer(0, 0, 0, 0); //Disable watchdog so the system doesn't reboot by timer
+    //Disable watchdog so the system doesn't reboot by timer and clear screen
+    gBS->SetWatchdogTimer(0, 0, 0, 0);
+    gST->ConOut->ClearScreen(gST->ConOut);
 
     /*-----------------------------------------------------------------------------------*/
     //
@@ -267,7 +261,7 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     //
     Status = gBS->LocateProtocol(&gEfiHiiDatabaseProtocolGuid, NULL, (VOID **)&gHiiDatabase);
     if (EFI_ERROR(Status)) {
-        Print(L"Unable to locate HII Database!\n");
+        Print(L"Unable to locate HII Database!\n\r");
         return EFI_NOT_STARTED;
     }
 
@@ -279,12 +273,12 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
       EFI_OPEN_PROTOCOL_GET_PROTOCOL);
 
     if (EFI_ERROR(Status)) {
-        Print(L"HII Packages not found in PE/COFF resource section!\n");
+        Print(L"HII Packages not found in PE/COFF resource section!\n\r");
         return Status;
     }
 
     //Get our strings
-    Status = gHiiDatabase->NewPackageList(gHiiDatabase, PackageList, NULL, &HiiHandle);
+    Status = gHiiDatabase->NewPackageList(gHiiDatabase, PackageList, NULL, &HiiHandleSREP);
     if (EFI_ERROR(Status))
     {
       Print(L"Unable to register more HII Package!\n\n\r");
@@ -304,14 +298,16 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
       gSimpleFontWideGlyphData,
       gSimpleFontWideBytes,
       gSimpleFontNarrowGlyphData,
-      gSimpleFontNarrowBytes);
+      gSimpleFontNarrowBytes
+    );
 
     EFI_HII_HANDLE FontHandle = HiiAddPackages(
       &gHIIRussianFontGuid, //This is OK
       NULL,
       FontPackage,
       NULL,
-      NULL);
+      NULL
+    );
 
     FreePool(FontPackage);
 
@@ -345,8 +341,8 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     HandleProtocol(LoadedImage->DeviceHandle, &gEfiSimpleFileSystemProtocolGuid, (void **)&FileSystem);
     FileSystem->OpenVolume(FileSystem, &Root);
 
-    Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PRESS_L), NULL));
-    for ( Status = EFI_UNSUPPORTED, Delay = 0x4; Delay != 0 && EFI_ERROR(Status); Delay--)
+    Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PRESS_L), NULL));
+    for (Status = EFI_UNSUPPORTED, Delay = 0x4; Delay != 0 && EFI_ERROR(Status); Delay--)
     {
       gBS->Stall(1000000);
       Status = gST->ConIn->ReadKeyStroke(gST->ConIn, &Key);
@@ -359,20 +355,20 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
       if (Status == EFI_SUCCESS) {
         LogFile->Delete(LogFile);
         Status = Root->Open(Root, &LogFile, L"SREP.log", EFI_FILE_MODE_WRITE | EFI_FILE_MODE_READ | EFI_FILE_MODE_CREATE, 0);
-        Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_DEL_LOG), NULL));
-        UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_DEL_LOG), NULL));
+        Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_DEL_LOG), NULL));
+        UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_DEL_LOG), NULL));
         LogToFile(LogFile, Log);
       }
       else
       {
-        Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_LOG_OPEN_FAIL), NULL));
+        Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_LOG_OPEN_FAIL), NULL));
         gBS->Stall(3000000);
         return Status;
       }
     }
     else
     {
-      Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_LOG_CANCEL), NULL));
+      Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_LOG_CANCEL), NULL));
     }
 
     /*-----------------------------------------------------------------------------------*/
@@ -395,8 +391,8 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
 
     if (Status == EFI_NOT_FOUND)
     {
-      Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_FAILED_REGEX), NULL));
-      UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_FAILED_REGEX), NULL));
+      Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_FAILED_REGEX), NULL));
+      UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_FAILED_REGEX), NULL));
       LogToFile(LogFile, Log);
     }
     else
@@ -455,8 +451,8 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
       ShellNextFileMemCmp = CompareMem((VOID *)u".cfg", FileInfo->FileName + StrnLenS(FileInfo->FileName, 0x100) - 0x4, 0x8);
       if (!ShellNextFileMemCmp)
       {
-        Print(L"%s%s\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CFG_FOUND), NULL), FileInfo->FileName);
-        UnicodeSPrint(Log, genericBufferSize, u"%s%s\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CFG_FOUND), NULL), FileInfo->FileName);
+        Print(L"%s%s\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CFG_FOUND), NULL), FileInfo->FileName);
+        UnicodeSPrint(Log, genericBufferSize, u"%s%s\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CFG_FOUND), NULL), FileInfo->FileName);
         LogToFile(LogFile, Log);
         break;
       }
@@ -472,8 +468,8 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     }
     if (FileInfo == NULL || EFI_ERROR(Status))
     {
-      Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CFG_SEARCH_FAIL), NULL));
-      UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CFG_SEARCH_FAIL), NULL));
+      Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CFG_SEARCH_FAIL), NULL));
+      UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CFG_SEARCH_FAIL), NULL));
       LogToFile(LogFile, Log);
       gBS->Stall(3000000);
       return Status;
@@ -483,8 +479,8 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     Status = Root->Open(Root, &ConfigFile, FileInfo->FileName, EFI_FILE_MODE_READ, 0);
     if (EFI_ERROR(Status))
     {
-      Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CFG_OPEN_FAIL), NULL));
-      UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CFG_OPEN_FAIL), NULL));
+      Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CFG_OPEN_FAIL), NULL));
+      UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CFG_OPEN_FAIL), NULL));
       LogToFile(LogFile, Log);
       gBS->Stall(3000000);
       return Status;
@@ -501,16 +497,16 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
         Status = ConfigFile->GetInfo(ConfigFile, &gFileInfo, &FileInfoSize, FileInfo);
         if (EFI_ERROR(Status))
         {
-            Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CFG_OPEN_FAIL), NULL));
-            UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CFG_OPEN_FAIL), NULL));
+            Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CFG_OPEN_FAIL), NULL));
+            UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CFG_OPEN_FAIL), NULL));
             LogToFile(LogFile, Log);
             gBS->Stall(3000000);
             return Status;
         }
     }
     UINTN ConfigDataSize = FileInfo->FileSize + 1; //Add Last null Terminator
-    Print(L"%s%X\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CFG_SIZE), NULL), ConfigDataSize - 1);
-    UnicodeSPrint(Log, genericBufferSize, u"%s%x\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CFG_SIZE), NULL), ConfigDataSize - 1);  //-1 to exclude Last null Terminator from size
+    Print(L"%s%X\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CFG_SIZE), NULL), ConfigDataSize - 1);
+    UnicodeSPrint(Log, genericBufferSize, u"%s%x\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CFG_SIZE), NULL), ConfigDataSize - 1);  //-1 to exclude Last null Terminator from size
     LogToFile(LogFile, Log);
 
     CHAR8 *ConfigData = AllocateZeroPool(ConfigDataSize);
@@ -520,8 +516,8 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     Status = ConfigFile->Read(ConfigFile, &ConfigDataSize, ConfigData);
     if (EFI_ERROR(Status))
     {
-      Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CFG_OPEN_FAIL), NULL));
-      UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CFG_OPEN_FAIL), NULL));
+      Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CFG_OPEN_FAIL), NULL));
+      UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CFG_OPEN_FAIL), NULL));
       LogToFile(LogFile, Log);
       gBS->Stall(3000000);
       return Status;
@@ -529,8 +525,8 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     ConfigFile->Close(ConfigFile);
 
     //Reach here if reading went fine
-    Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PARSING), NULL));
-    UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PARSING), NULL));
+    Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PARSING), NULL));
+    UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PARSING), NULL));
     LogToFile(LogFile, Log);
 
     //Stripping NewLine, Carriage and Return
@@ -550,15 +546,15 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     Start->next = NULL;
     BOOLEAN NullByteSkipped = FALSE;
 
-    //Regex match var
+    //Pattern match vars
     CHAR16 *Pattern16 = NULL;
+    INTN StrDiff = 0;
 
     //Fill OP_DATA accroding to ConfigData
     while (curr_pos < ConfigDataSize)
     {
+        if (curr_pos != 0 && !NullByteSkipped) { curr_pos += AsciiStrLen(&ConfigData[curr_pos]); }
 
-        if (curr_pos != 0 && !NullByteSkipped)
-            curr_pos += AsciiStrLen(&ConfigData[curr_pos]);
         if (ConfigData[curr_pos] == '\0')
         {
             curr_pos += 1;
@@ -566,6 +562,7 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
             continue;
         }
         NullByteSkipped = FALSE;
+
         if (AsciiStrStr(&ConfigData[curr_pos], "#"))
         {
           curr_pos += AsciiStrLen(&ConfigData[curr_pos]); //Skip the whole line
@@ -573,126 +570,145 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
         }
         else
         {
-          Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CURRENT_LINE), NULL), &ConfigData[curr_pos]);
-          UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CURRENT_LINE), NULL), &ConfigData[curr_pos]);
+          Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CURRENT_LINE), NULL), &ConfigData[curr_pos]);
+          UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CURRENT_LINE), NULL), &ConfigData[curr_pos]);
           LogToFile(LogFile, Log);
         }
         if (AsciiStrStr(&ConfigData[curr_pos], "End"))
         {
-          Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_OP_END), NULL));
-          UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_OP_END), NULL));
+          Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_OP_END), NULL));
+          UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_OP_END), NULL));
           LogToFile(LogFile, Log);
           continue;
         }
         if (AsciiStrStr(&ConfigData[curr_pos], "Op"))
         {
             curr_pos += 3;
-            Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_COMMAND), NULL), &ConfigData[curr_pos]);
-            UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_COMMAND), NULL), &ConfigData[curr_pos]);
+            Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_COMMAND), NULL), &ConfigData[curr_pos]);
+            UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_COMMAND), NULL), &ConfigData[curr_pos]);
             LogToFile(LogFile, Log);
 
-            if (AsciiStrStr(&ConfigData[curr_pos], "LoadFromFS"))
-            {
-              Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
-              Prev_OP->ID = LOAD_FS;
-              Add_OP_CODE(Start, Prev_OP);
-              continue;
-            }
-            if (AsciiStrStr(&ConfigData[curr_pos], "LoadFromFV"))
-            {
-              Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
-              Prev_OP->ID = LOAD_FV;
-              Add_OP_CODE(Start, Prev_OP);
-              continue;
-            }
-            if (AsciiStrStr(&ConfigData[curr_pos], "LoadGUIDandSavePE"))
-            {
-              Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
-              Prev_OP->ID = LOAD_GUID_PE;
-              Add_OP_CODE(Start, Prev_OP);
-              continue;
-            }
-            if (AsciiStrStr(&ConfigData[curr_pos], "LoadGUIDandSaveFreeform"))
-            {
-              Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
-              Prev_OP->ID = LOAD_GUID_RAWnFREEFORM;
-              Add_OP_CODE(Start, Prev_OP);
-              continue;
-            }
-            if (AsciiStrStr(&ConfigData[curr_pos], "Compatibility"))
-            {
-              Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
-              Prev_OP->ID = COMPATIBILITY;
-              Add_OP_CODE(Start, Prev_OP);
-              continue;
-            }
             if (AsciiStrStr(&ConfigData[curr_pos], "Loaded"))
             {
               Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
               Prev_OP->ID = LOADED;
-              Add_OP_CODE(Start, Prev_OP);
+              AddOpCode(Start, Prev_OP);
               continue;
             }
             if (AsciiStrStr(&ConfigData[curr_pos], "NonamePE"))
             {
               Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
               Prev_OP->ID = LOADED_GUID_PE;
-              Add_OP_CODE(Start, Prev_OP);
+              AddOpCode(Start, Prev_OP);
               continue;
             }
             if (AsciiStrStr(&ConfigData[curr_pos], "NonameTE"))
             {
               Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
               Prev_OP->ID = LOADED_GUID_TE;
-              Add_OP_CODE(Start, Prev_OP);
+              AddOpCode(Start, Prev_OP);
               continue;
             }
             if (AsciiStrStr(&ConfigData[curr_pos], "HandleIndex"))
             {
               Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
               Prev_OP->ID = LOADED_INDEX;
-              Add_OP_CODE(Start, Prev_OP);
+              AddOpCode(Start, Prev_OP);
+              continue;
+            }
+            if (AsciiStrStr(&ConfigData[curr_pos], "LoadFromFS"))
+            {
+              Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
+              Prev_OP->ID = LOAD_FS;
+              AddOpCode(Start, Prev_OP);
+              continue;
+            }
+            if (AsciiStrStr(&ConfigData[curr_pos], "LoadFromFV"))
+            {
+              Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
+              Prev_OP->ID = LOAD_FV;
+              AddOpCode(Start, Prev_OP);
+              continue;
+            }
+            if (AsciiStrStr(&ConfigData[curr_pos], "LoadGUIDandSavePE"))
+            {
+              Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
+              Prev_OP->ID = LOAD_GUID_PE;
+              AddOpCode(Start, Prev_OP);
+              continue;
+            }
+            if (AsciiStrStr(&ConfigData[curr_pos], "LoadGUIDandSaveFreeform"))
+            {
+              Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
+              Prev_OP->ID = LOAD_GUID_RAWnFREEFORM;
+              AddOpCode(Start, Prev_OP);
+              continue;
+            }
+            if (AsciiStrStr(&ConfigData[curr_pos], "HiiForceLoad"))
+            {
+              Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
+              Prev_OP->ID = LOAD_HII_FORCE;
+              AddOpCode(Start, Prev_OP);
               continue;
             }
             if (AsciiStrStr(&ConfigData[curr_pos], "FastPatch"))
             {
               Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
               Prev_OP->ID = PATCH_FAST;
-              Add_OP_CODE(Start, Prev_OP);
+              AddOpCode(Start, Prev_OP);
               continue;
             }
             if (AsciiStrStr(&ConfigData[curr_pos], "Patch"))
             {
               if (!isRegexActive) {
-                Print(L"Patch%sFastPatch\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_FAILED_REGEX2), NULL));
-                UnicodeSPrint(Log, genericBufferSize, u"Patch%sFastPatch\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_FAILED_REGEX2), NULL));
+                Print(L"Patch%sFastPatch\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_FAILED_REGEX2), NULL));
+                UnicodeSPrint(Log, genericBufferSize, u"Patch%sFastPatch\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_FAILED_REGEX2), NULL));
                 LogToFile(LogFile, Log);
 
                 Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
                 Prev_OP->ID = PATCH_FAST;
-                Add_OP_CODE(Start, Prev_OP);
+                AddOpCode(Start, Prev_OP);
                 continue;
               }
 
               Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
               Prev_OP->ID = PATCH;
-              Add_OP_CODE(Start, Prev_OP);
+
+              Prev_OP->PatchLimit = -1;
+              if (AsciiStrLen(&ConfigData[curr_pos]) > sizeof("Patch")) { //True when "Patch_N" compared to "Patch", size 7 > 6
+                StrDiff = AsciiStrCmp(&ConfigData[curr_pos], "Patch ");
+
+                Prev_OP->PatchLimit = (BOOLEAN)(StrDiff >= L'0' && StrDiff <= L'9') ? StrDiff - L'0' : Prev_OP->PatchLimit;
+              }
+
+              AddOpCode(Start, Prev_OP);
               continue;
             }
-            if (AsciiStrStr(&ConfigData[curr_pos], "Exec"))
+            if (AsciiStrStr(&ConfigData[curr_pos], "UninstallProtocol"))
             {
-              Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_OP_EXEC), NULL));
-              UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_OP_EXEC), NULL));
-              LogToFile(LogFile, Log);
               Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
-              Prev_OP->ID = EXEC;
-              Add_OP_CODE(Start, Prev_OP);
+              Prev_OP->ID = UNINSTALL_PROTOCOL;
+              AddOpCode(Start, Prev_OP);
+              continue;
+            }
+            if (AsciiStrStr(&ConfigData[curr_pos], "Compatibility"))
+            {
+              Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
+              Prev_OP->ID = COMPATIBILITY;
+              AddOpCode(Start, Prev_OP);
+              continue;
+            }
+            if (AsciiStrStr(&ConfigData[curr_pos], "UpdateHiiPackage"))
+            {
+              Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
+              Prev_OP->ID = UPDATE_PACK;
+              AddOpCode(Start, Prev_OP);
               continue;
             }
             if (AsciiStrStr(&ConfigData[curr_pos], "Skip"))
             {
-              Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_OP_SKIP), NULL));
-              UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_OP_SKIP), NULL));
+              Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_OP_SKIP), NULL));
+              UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_OP_SKIP), NULL));
               LogToFile(LogFile, Log);
 
               DEBUG_CODE(
@@ -702,17 +718,17 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
 
               /*
               * Add Op Code if
-              * 1 >= ID <= 11
+              * 1 >= ID <= 12
               */
-              if (Prev_OP->ID >= 1 && Prev_OP->ID <= 11) {
-                Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_OP_SKIP_SUPPORTED), NULL));
-                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_OP_SKIP_SUPPORTED), NULL));
+              if (Prev_OP->ID >= 1 && Prev_OP->ID <= 12) {
+                Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_OP_SKIP_SUPPORTED), NULL));
+                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_OP_SKIP_SUPPORTED), NULL));
                 LogToFile(LogFile, Log);
               }
               else
               {
-                Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_OP_SKIP_UNSUPPORTED), NULL));
-                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_OP_SKIP_UNSUPPORTED), NULL));
+                Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_OP_SKIP_UNSUPPORTED), NULL));
+                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_OP_SKIP_UNSUPPORTED), NULL));
                 LogToFile(LogFile, Log);
                 curr_pos += AsciiStrLen(&ConfigData[curr_pos]);
                 continue;
@@ -720,38 +736,41 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
 
               Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
               Prev_OP->ID = SKIP;
-              Add_OP_CODE(Start, Prev_OP);
+              AddOpCode(Start, Prev_OP);
               continue;
             }
-            if (AsciiStrStr(&ConfigData[curr_pos], "UninstallProtocol"))
+            if (AsciiStrStr(&ConfigData[curr_pos], "Exec"))
             {
+              Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_OP_EXEC), NULL));
+              UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_OP_EXEC), NULL));
+              LogToFile(LogFile, Log);
               Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
-              Prev_OP->ID = UNINSTALL_PROTOCOL;
-              Add_OP_CODE(Start, Prev_OP);
+              Prev_OP->ID = EXEC;
+              AddOpCode(Start, Prev_OP);
               continue;
             }
-            if (AsciiStrStr(&ConfigData[curr_pos], "UpdateHiiPackage"))
+            if (AsciiStrStr(&ConfigData[curr_pos], "SendForm"))
             {
               Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
-              Prev_OP->ID = UPDATE_PACK;
-              Add_OP_CODE(Start, Prev_OP);
+              Prev_OP->ID = SEND_FORM;
+              AddOpCode(Start, Prev_OP);
               continue;
             }
             if (AsciiStrStr(&ConfigData[curr_pos], "GetAptioDB"))
             {
-              /*
+              /* Removed
               Prev_OP = AllocateZeroPool(sizeof(struct OP_DATA));
               Prev_OP->ID = GET_AptioDB;
               Add_OP_CODE(Start, Prev_OP);
               */
-              Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_INACTIVE_OP), NULL));
-              UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_INACTIVE_OP), NULL));
+              Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_INACTIVE_OP), NULL));
+              UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_INACTIVE_OP), NULL));
               LogToFile(LogFile, Log);
               continue;
             }
 
-            Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_INVALID_OP), NULL), &ConfigData[curr_pos]);
-            UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_INVALID_OP), NULL), &ConfigData[curr_pos]);
+            Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_INVALID_OP), NULL), &ConfigData[curr_pos]);
+            UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_INVALID_OP), NULL), &ConfigData[curr_pos]);
             LogToFile(LogFile, Log);
             return EFI_INVALID_PARAMETER;
         }
@@ -759,16 +778,16 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
         if (
              (
                Prev_OP->ID == LOADED || Prev_OP->ID == LOADED_GUID_PE || Prev_OP->ID == LOADED_GUID_TE || Prev_OP->ID == LOADED_INDEX || Prev_OP->ID == LOAD_FS || Prev_OP->ID == LOAD_FV
-               || Prev_OP->ID == LOAD_GUID_PE || Prev_OP->ID == UNINSTALL_PROTOCOL || Prev_OP->ID == COMPATIBILITY || Prev_OP->ID == SKIP || Prev_OP->ID == GET_DB
+               || Prev_OP->ID == LOAD_GUID_PE || Prev_OP->ID == UNINSTALL_PROTOCOL || Prev_OP->ID == COMPATIBILITY || Prev_OP->ID == SKIP
              )
              && Prev_OP->Name == 0
            )
         {
-            Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_FOUND_NAME_INPUT), NULL), &ConfigData[curr_pos]);
-            UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_FOUND_NAME_INPUT), NULL), &ConfigData[curr_pos]);
+            Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_FOUND_NAME_INPUT), NULL), &ConfigData[curr_pos]);
+            UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_FOUND_NAME_INPUT), NULL), &ConfigData[curr_pos]);
             LogToFile(LogFile, Log);
 
-            UINTN FileNameLength = AsciiStrLen(&ConfigData[curr_pos]) + 1;
+            UINTN FileNameLength = AsciiStrLen(&ConfigData[curr_pos]) + sizeof(UINT8);
             CHAR8 *FileName = AllocateZeroPool(FileNameLength);
             CopyMem(FileName, &ConfigData[curr_pos], FileNameLength);
             Prev_OP->Name = FileName;
@@ -777,61 +796,61 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
         }
         if ((Prev_OP->ID == UPDATE_PACK) && (Prev_OP->Name == 0))
         {
-            UINTN PackageGuidLength = AsciiStrLen(&ConfigData[curr_pos]) + 1;
+            UINTN PackageGuidLength = AsciiStrLen(&ConfigData[curr_pos]) + sizeof(UINT8);
             CHAR8 *FileName = AllocateZeroPool(PackageGuidLength);
             CopyMem(FileName, &ConfigData[curr_pos], PackageGuidLength);
             Prev_OP->Name = FileName;
             Prev_OP->Name_Dyn_Alloc = TRUE;
             UINTN placeholderUintn = { 0 };
 
-            Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_FOUND_GUID_INPUT), NULL), &ConfigData[curr_pos]);
-            UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_FOUND_GUID_INPUT), NULL), &ConfigData[curr_pos]);
+            Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_FOUND_GUID_INPUT), NULL), &ConfigData[curr_pos]);
+            UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_FOUND_GUID_INPUT), NULL), &ConfigData[curr_pos]);
             LogToFile(LogFile, Log);
 
             //Skip the line with Package Guid and skip again if the next one is not populated
-            curr_pos += PackageGuidLength + 1; //+1 is needed
+            curr_pos += PackageGuidLength + sizeof(UINT8); //+1 is needed
             if (RETURN_ERROR(AsciiStrHexToUintnS(&ConfigData[curr_pos], NULL, &placeholderUintn)))
             {
-              Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PACKAGE_GUID_INPUT), NULL));
-              UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PACKAGE_GUID_INPUT), NULL));
+              Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PACKAGE_GUID_INPUT), NULL));
+              UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PACKAGE_GUID_INPUT), NULL));
               LogToFile(LogFile, Log);
 
               //Get back at the prev pos. so not to break the program sequence
-              curr_pos -= PackageGuidLength + 1;
+              curr_pos -= PackageGuidLength + sizeof(UINT8);
               Prev_OP->Name2 = NULL;
               continue;
             }
 
-            Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PACKAGE_SIZE_INPUT), NULL), &ConfigData[curr_pos]);
-            UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PACKAGE_SIZE_INPUT), NULL), &ConfigData[curr_pos]);
+            Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PACKAGE_SIZE_INPUT), NULL), &ConfigData[curr_pos]);
+            UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PACKAGE_SIZE_INPUT), NULL), &ConfigData[curr_pos]);
             LogToFile(LogFile, Log);
 
-            UINTN CustomPackageLength = AsciiStrLen(&ConfigData[curr_pos]) + 1;
-            FileName = AllocateZeroPool(CustomPackageLength);
-            CopyMem(FileName, &ConfigData[curr_pos], CustomPackageLength);
+            UINTN CustomPackageSizeStrLength = AsciiStrLen(&ConfigData[curr_pos]) + sizeof(UINT8);
+            FileName = AllocateZeroPool(CustomPackageSizeStrLength);
+            CopyMem(FileName, &ConfigData[curr_pos], CustomPackageSizeStrLength);
             Prev_OP->Name2 = FileName;
             Prev_OP->Name2_Dyn_Alloc = TRUE;
             continue;
         }
         if ((Prev_OP->ID == LOAD_GUID_RAWnFREEFORM) && (Prev_OP->Name == 0))
         {
-            UINTN FileGuidLength = AsciiStrLen(&ConfigData[curr_pos]) + 1;
+            UINTN FileGuidLength = AsciiStrLen(&ConfigData[curr_pos]) + sizeof(UINT8);
             CHAR8 *FileName = AllocateZeroPool(FileGuidLength);
             CopyMem(FileName, &ConfigData[curr_pos], FileGuidLength);
             Prev_OP->Name = FileName;
             Prev_OP->Name_Dyn_Alloc = TRUE;
-            EFI_GUID placeholderGuid = { 0 };
+            EFI_GUID placeholderGUID = { 0 };
 
-            Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_FOUND_GUID_INPUT), NULL), &ConfigData[curr_pos]);
-            UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_FOUND_GUID_INPUT), NULL), &ConfigData[curr_pos]);
+            Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_FOUND_GUID_INPUT), NULL), &ConfigData[curr_pos]);
+            UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_FOUND_GUID_INPUT), NULL), &ConfigData[curr_pos]);
             LogToFile(LogFile, Log);
 
             //Skip the line with File Guid and skip again if the next one is not populated
             curr_pos += FileGuidLength + 1; //+1 is needed
-            if (RETURN_ERROR(AsciiStrToGuid(&ConfigData[curr_pos], &placeholderGuid)))
+            if (RETURN_ERROR(AsciiStrToGuid(&ConfigData[curr_pos], &placeholderGUID)))
             {
-              Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_RAW_GUID_INPUT), NULL));
-              UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_RAW_GUID_INPUT), NULL));
+              Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_RAW_GUID_INPUT), NULL));
+              UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_RAW_GUID_INPUT), NULL));
               LogToFile(LogFile, Log);
 
               //Get back at the prev pos. so not to break the program sequence
@@ -840,11 +859,11 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
               continue;
             }
 
-            Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_SECTION_GUID_INPUT), NULL), &ConfigData[curr_pos]);
-            UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_SECTION_GUID_INPUT), NULL), &ConfigData[curr_pos]);
+            Print(L"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_SECTION_GUID_INPUT), NULL), &ConfigData[curr_pos]);
+            UnicodeSPrint(Log, genericBufferSize, u"%s%a\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_SECTION_GUID_INPUT), NULL), &ConfigData[curr_pos]);
             LogToFile(LogFile, Log);
 
-            UINTN SectionGuidLength = AsciiStrLen(&ConfigData[curr_pos]) + 1;
+            UINTN SectionGuidLength = AsciiStrLen(&ConfigData[curr_pos]) + sizeof(UINT8);
             FileName = AllocateZeroPool(SectionGuidLength);
             CopyMem(FileName, &ConfigData[curr_pos], SectionGuidLength);
             Prev_OP->Name2 = FileName;
@@ -855,25 +874,25 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
         {
             if (AsciiStrStr(&ConfigData[curr_pos], "Offset"))
             {
-                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_ARG_OFFSET), NULL));
+                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_ARG_OFFSET), NULL));
                 LogToFile(LogFile, Log);
                 Prev_OP->PatchType = OFFSET;
             }
             if (AsciiStrStr(&ConfigData[curr_pos], "Pattern"))
             {
-                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_ARG_PATTERN), NULL));
+                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_ARG_PATTERN), NULL));
                 LogToFile(LogFile, Log);
                 Prev_OP->PatchType = PATTERN;
             }
             if (AsciiStrStr(&ConfigData[curr_pos], "RelNegOffset"))
             {
-                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_ARG_OFFSET), NULL));
+                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_ARG_OFFSET), NULL));
                 LogToFile(LogFile, Log);
                 Prev_OP->PatchType = REL_NEG_OFFSET;
             }
             if (AsciiStrStr(&ConfigData[curr_pos], "RelPosOffset"))
             {
-                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_ARG_OFFSET), NULL));
+                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_ARG_OFFSET), NULL));
                 LogToFile(LogFile, Log);
                 Prev_OP->PatchType = REL_POS_OFFSET;
             }
@@ -887,21 +906,21 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
         {
             if (Prev_OP->PatchType == OFFSET || Prev_OP->PatchType == REL_NEG_OFFSET || Prev_OP->PatchType == REL_POS_OFFSET) //Patch by offset
             {
-                Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_ARG_OFFSET_DECODED), NULL));
-                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_ARG_OFFSET_DECODED), NULL));
+                Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_ARG_OFFSET_DECODED), NULL));
+                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_ARG_OFFSET_DECODED), NULL));
                 LogToFile(LogFile, Log);
                 Prev_OP->ARG3 = AsciiStrHexToUint64(&ConfigData[curr_pos]);
             }
             if (Prev_OP->PatchType == PATTERN) //Take offset from Prev_OP if it was PATTERN patch
             {
-                Prev_OP->ARG3 = MAX_UINT32;
-                Prev_OP->ARG6 = AsciiStrLen(&ConfigData[curr_pos]) / 2;
-                Print(L"\n%s%x\n\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATTERN_SIZE), NULL), Prev_OP->ARG6);
-                UnicodeSPrint(Log, genericBufferSize, u"%s%x\n\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATTERN_SIZE), NULL), Prev_OP->ARG6);
+                Prev_OP->ARG3 = -1;
+                Prev_OP->ARG6 = AsciiStrLen(&ConfigData[curr_pos]) / sizeof(UINT16);
+                Print(L"\n%s%x\n\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATTERN_SIZE), NULL), Prev_OP->ARG6);
+                UnicodeSPrint(Log, genericBufferSize, u"%s%x\n\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATTERN_SIZE), NULL), Prev_OP->ARG6);
                 LogToFile(LogFile, Log);
 
                 //Patch with regex impl. 
-                UINTN RegexLength = AsciiStrLen(&ConfigData[curr_pos]) + 1;
+                UINTN RegexLength = AsciiStrLen(&ConfigData[curr_pos]) + sizeof(UINT8);
                 CHAR8 *RegexChar = AllocateZeroPool(RegexLength);
                 CopyMem(RegexChar, &ConfigData[curr_pos], RegexLength);
                 Prev_OP->RegexChar = RegexChar;
@@ -912,8 +931,8 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
                 Prev_OP->ARG7 = (UINT64)AllocateZeroPool(Prev_OP->ARG6);
                 RETURN_STATUS FastPatchInputStatus = AsciiStrHexToBytes(&ConfigData[curr_pos], Prev_OP->ARG6 * 2, (UINT8 *)Prev_OP->ARG7, Prev_OP->ARG6);
                 if (RETURN_ERROR(FastPatchInputStatus) && Prev_OP->ID == PATCH_FAST) {
-                  Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_NOT_PATCHED), NULL), FastPatchInputStatus);
-                  UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_NOT_PATCHED), NULL), FastPatchInputStatus);
+                  Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_NOT_PATCHED), NULL), FastPatchInputStatus);
+                  UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_NOT_PATCHED), NULL), FastPatchInputStatus);
                   LogToFile(LogFile, Log);
                   gBS->Exit(ImageHandle, 0, 0, 0);
                 }
@@ -927,9 +946,9 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
         if ((Prev_OP->ID == PATCH_FAST || Prev_OP->ID == PATCH) && Prev_OP->PatchType != 0 && Prev_OP->ARG3 != 0)
         {
 
-            Prev_OP->ARG4 = AsciiStrLen(&ConfigData[curr_pos]) / 2;
-            Print(L"\n%s%x\n\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATCH_SIZE), NULL), Prev_OP->ARG4);
-            UnicodeSPrint(Log, genericBufferSize, u"%s%x\n\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATCH_SIZE), NULL), Prev_OP->ARG4);
+            Prev_OP->ARG4 = AsciiStrLen(&ConfigData[curr_pos]) / sizeof(UINT16);
+            Print(L"\n%s%x\n\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATCH_SIZE), NULL), Prev_OP->ARG4);
+            UnicodeSPrint(Log, genericBufferSize, u"%s%x\n\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATCH_SIZE), NULL), Prev_OP->ARG4);
             LogToFile(LogFile, Log);
 
             Prev_OP->ARG5_Dyn_Alloc = TRUE;
@@ -937,8 +956,8 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
             AsciiStrHexToBytes(&ConfigData[curr_pos], Prev_OP->ARG4 * 2, (UINT8 *)Prev_OP->ARG5, Prev_OP->ARG4);
             
             AsciiStrToUnicodeStrS(&ConfigData[curr_pos], Pattern16, Prev_OP->ARG4 * 2);
-            Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATCH_PENDING), NULL));
-            UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATCH_PENDING), NULL));
+            Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATCH_PENDING), NULL));
+            UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATCH_PENDING), NULL));
             LogToFile(LogFile, Log);
 
             PrintDump(Prev_OP->ARG4, (UINT8 *)Prev_OP->ARG5);
@@ -960,22 +979,20 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     //Op Patch vars
     INT64 BaseOffset = 0; //REL_POS and REL_NEG args rely on this
     UINT64 *Captures = { 0 }; //Represents found offsets, each offset can be up to 8 bytes
-    UINTN j = 0; //Stores Captures index
+    UINTN MatchesCount = 0; //Stores Captures index
 
-    //Op GetAptioDB vars
-    BOOLEAN isDBThere = FALSE;
-    UINTN DBSize = 0;
-    UINTN DBPointer = 0;
-
-    //Op Compatibility var
-    EFI_GUID FilterProtocol = gEfiFirmwareVolume2ProtocolGuid;
+    //Op Compatibility var, don't change
+    EFI_GUID FilterProtocol = gEfiFirmwareVolume2ProtocolGuid; //is set to EFI_FIRMWARE_VOLUME2_PROTOCOL for 'FindLoadedImageFileNameSREP' and 'LocateAndLoadFv...'
 
     //Op UninstallProtocol var
-    UINTN UninstallIndexes = 0;
+    UINTN UninstallIndices = 0;
 
     //Op Skip vars
     BOOLEAN isOpSkipAllowed = FALSE;
     UINTN skip_pos = 0;
+
+    //Op HiiForceLoad var
+    EFI_HII_HANDLE HiiHandleFromFS = NULL;
 
     for (next = Start; next != NULL; next = next->next)
     {
@@ -1015,14 +1032,14 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
 
             HandleBuffer = AllocateZeroPool(MAX_UINT16 * sizeof(EFI_HANDLE));
 
-            Status = FindLoadedImageFromShellIndex(ImageHandle, next->Name, &ImageInfo, &HandleBuffer);
+            Status = FindLoadedImageFromShellIndex(ImageHandle, next->Name, &ImageInfo, &HandleBuffer, FilterProtocol);
 
             PrintSearchResult(Status);
 
             if (!EFI_ERROR(Status) && HandleBuffer != NULL) {
               if (LogFile != NULL) {
-                Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_STANDBY), NULL));
-                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_HANDLE_DUMP), NULL));
+                Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_STANDBY), NULL));
+                UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_HANDLE_DUMP), NULL));
                 LogToFile(LogFile, Log);
 
                 for (UINT16 i = 0; HandleBuffer[i] != NULL; i++) {
@@ -1069,8 +1086,8 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
               break;
             };
 
-            Print(L"%s0x%x / 0x%x\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_SECTION_BASENSIZE), NULL), (UINT8 *)ImageInfo->ImageBase, (UINT8 *)ImageInfo->ImageSize);
-            UnicodeSPrint(Log, genericBufferSize, u"%s0x%x / 0x%x\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_SECTION_BASENSIZE), NULL), (UINT8 *)ImageInfo->ImageBase, (UINT8 *)ImageInfo->ImageSize);
+            Print(L"%s0x%x / 0x%x\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_SECTION_BASENSIZE), NULL), (UINT8 *)ImageInfo->ImageBase, (UINT8 *)ImageInfo->ImageSize);
+            UnicodeSPrint(Log, genericBufferSize, u"%s0x%x / 0x%x\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_SECTION_BASENSIZE), NULL), (UINT8 *)ImageInfo->ImageBase, (UINT8 *)ImageInfo->ImageSize);
             LogToFile(LogFile, Log);
 
             isOpSkipAllowed = !EFI_ERROR(Status);
@@ -1086,9 +1103,18 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
               break;
             };
 
-            Print(L"%s0x%x / 0x%x\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_SECTION_BASENSIZE), NULL), (UINT8 *)ImageInfo->ImageBase, (UINT8 *)ImageInfo->ImageSize);
-            UnicodeSPrint(Log, genericBufferSize, u"%s0x%x / 0x%x\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_SECTION_BASENSIZE), NULL), (UINT8 *)ImageInfo->ImageBase, (UINT8 *)ImageInfo->ImageSize);
+            Print(L"%s0x%x / 0x%x\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_SECTION_BASENSIZE), NULL), (UINT8 *)ImageInfo->ImageBase, (UINT8 *)ImageInfo->ImageSize);
+            UnicodeSPrint(Log, genericBufferSize, u"%s0x%x / 0x%x\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_SECTION_BASENSIZE), NULL), (UINT8 *)ImageInfo->ImageBase, (UINT8 *)ImageInfo->ImageSize);
             LogToFile(LogFile, Log);
+
+            isOpSkipAllowed = !EFI_ERROR(Status);
+            break;
+        case LOAD_HII_FORCE:
+            PrintCase(L"HiiForceLoad");
+
+            Status = AddFirstHiiPackageFromFile(ImageHandle, ImageInfo, &HiiHandleFromFS);
+
+            PrintSearchResult(Status);
 
             isOpSkipAllowed = !EFI_ERROR(Status);
             break;
@@ -1097,273 +1123,194 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
 
             PrintCase(L"FastPatch");
 
-            /*
-            * Reset to patch by ImageInfo if
-            * Op has changed from GetAptioDB with success
-            */
-            if(Status == EFI_SUCCESS){
-              isDBThere = FALSE;
-              DBPointer = 0;
-            }
+            if (EFI_ERROR(Status) || ImageInfo->ImageSize == 0) { FreePool(ImageInfo); next->ARG3 = 0; }
 
-            /*
-            * Reset ImageInfo if
-            * Prev Op has not found an Image
-            * Prev Op is not GetAptioDB
-            */
-            if (EFI_ERROR(Status) && isDBThere == FALSE){ FreePool(ImageInfo); goto PatchFail; }
+            if (next->PatchType == PATTERN && next->ARG3)
+            {
+                Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATTERN_SEARCH), NULL));
 
-            //Reach here if image found (Status = SUCCESS)
-            if (!isDBThere) {
-              Print(L"%s%x\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_BIN_SIZE), NULL), ImageInfo->ImageSize);
-              UnicodeSPrint(Log, genericBufferSize, u"%s%x\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_BIN_SIZE), NULL), ImageInfo->ImageSize);
-              LogToFile(LogFile, Log);
-            }
-
-              if (next->PatchType == PATTERN)
-              {
-                  Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATTERN_SEARCH), NULL));
-
-                  if (isDBThere) {
-                    for (UINTN i = 0; i < DBSize - next->ARG6; i += 1)
-                    {
-                      next->ARG3 = DBPointer + i;
-                      //Since DBPointer is not (UINT8 *), have to use ARG3 as DestinBuf, which slows the cycle
-                      if (CompareMem((UINT8 *)next->ARG3, (UINT8 *)next->ARG7, next->ARG6) == 0)
-                      {
-                        break;
-                      }
-                    }
-
-                    DEBUG_CODE(
-                      //Debug
-                      Print(L"Base: %x\n\r", DBPointer);
-                      Print(L"ARG3: %x\n\r", (UINT8 *)next->ARG3);
-                    );
+                for (UINTN i = 0; i < ImageInfo->ImageSize - next->ARG6; i++)
+                {
+                  if (!(i % 0x1000)) {
+                    //Print(L"\r0x%X out of 0x%X", &ImageInfo->ImageBase + i, &ImageInfo->ImageBase + ImageInfo->ImageSize);
+                    DisplayUpdateProgressSREP((UINTN)(((float)i / ImageInfo->ImageSize) * 100));
                   }
-                  else
+
+                  if (i >= MAX_UINT32)
                   {
-                    for (UINTN i = 0; i < ImageInfo->ImageSize - next->ARG6; i += 1)
-                    {
-                      //Old imp, no regex
-                      if (CompareMem(((UINT8 *)ImageInfo->ImageBase) + i, (UINT8 *)next->ARG7, next->ARG6) == 0)
-                      {
-                        next->ARG3 = i;
-                        break;
-                      }
-                    }
-                  }
-                  if (next->ARG3 == MAX_UINT32) //Stopped near overflow
-                  {
-                    Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATTERN_NOT_FOUND), NULL));
-                    UnicodeSPrint(Log, genericBufferSize, u"%s\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATTERN_NOT_FOUND), NULL));
+                    DisplayUpdateProgressSREP(100);
+                    Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATTERN_NOT_FOUND), NULL));
+                    UnicodeSPrint(Log, genericBufferSize, u"%s\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATTERN_NOT_FOUND), NULL));
                     LogToFile(LogFile, Log);
 
                     next->ARG3 = 0;
+                    break;
                   }
-              }
-              if (next->PatchType == REL_POS_OFFSET && next->ARG3 != 0)
-              {
-                next->ARG3 = BaseOffset + next->ARG3;
-                Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_REL_POS_OFFSET), NULL));
-              }
-              if (next->PatchType == REL_NEG_OFFSET && next->ARG3 != 0)
-              {
-                next->ARG3 = BaseOffset - next->ARG3;
-                Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_REL_NEG_OFFSET), NULL));
-              }
-              BaseOffset = next->ARG3;
 
-              Print(L"%s%X\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_MATCH_OFFSET), NULL), next->ARG3);
-              UnicodeSPrint(Log, genericBufferSize, u"%s%X\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_MATCH_OFFSET), NULL), next->ARG3);
-              LogToFile(LogFile, Log);
-
-              if (next->ARG3 != 0) {
-                isOpSkipAllowed = TRUE;
-
-                Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATCHED), NULL));
-                UnicodeSPrint(Log, genericBufferSize, u"%s", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATCHED), NULL));
-                LogToFile(LogFile, Log);
-
-                if (!isDBThere) {
-                  CopyMem((UINT8 *)ImageInfo->ImageBase + next->ARG3, (UINT8 *)next->ARG5, next->ARG4);
+                  //Old imp, no regex
+                  if (CompareMem(((UINT8 *)ImageInfo->ImageBase) + i, (UINT8 *)next->ARG7, next->ARG6) == 0)
+                  {
+                    next->ARG3 = i;
+                    break;
+                  }
                 }
-                else
-                {
-                  CopyMem((UINT8 *)next->ARG3, (UINT8 *)next->ARG5, next->ARG4);
-                }
-                Status = EFI_SUCCESS;
-              }
-              else
-              {
-                Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_NOT_PATCHED), NULL));
-                UnicodeSPrint(Log, genericBufferSize, u"%s", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_NOT_PATCHED), NULL));
-                LogToFile(LogFile, Log);
-              }
+                Print(L"\n");
+            }
+            if (next->PatchType == REL_POS_OFFSET && next->ARG3)
+            {
+              next->ARG3 = BaseOffset + next->ARG3;
+              Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_REL_POS_OFFSET), NULL));
+            }
+            if (next->PatchType == REL_NEG_OFFSET && next->ARG3)
+            {
+              next->ARG3 = BaseOffset - next->ARG3;
+              Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_REL_NEG_OFFSET), NULL));
+            }
+            BaseOffset = next->ARG3;
 
-              PatchFail:
-              next->ARG3 = 0;
-              break;
-        case PATCH:
-            isOpSkipAllowed = FALSE;
-            /*
-            * Reset ImageInfo if
-            * Prev Op has not found an Image
-            */
-            if (EFI_ERROR(Status)) { FreePool(ImageInfo); goto PatchFail; }
-
-            PrintCase(L"Patch");
-            Print(L"%s%x\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_BIN_SIZE), NULL), ImageInfo->ImageSize);
-            UnicodeSPrint(Log, genericBufferSize, u"%s%x\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_BIN_SIZE), NULL), ImageInfo->ImageSize);
+            Print(L"%s%X\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_MATCH_OFFSET), NULL), next->ARG3);
+            UnicodeSPrint(Log, genericBufferSize, u"%s%X\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_MATCH_OFFSET), NULL), next->ARG3);
             LogToFile(LogFile, Log);
 
-            if (next->PatchType == PATTERN)
+            if (next->ARG3 > 0) {
+              isOpSkipAllowed = TRUE;
+
+              CopyMem((UINT8 *)ImageInfo->ImageBase + next->ARG3, (UINT8 *)next->ARG5, next->ARG4);
+
+              Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATCHED), NULL));
+              UnicodeSPrint(Log, genericBufferSize, u"%s", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATCHED), NULL));
+              LogToFile(LogFile, Log);
+
+              Status = EFI_SUCCESS;
+            }
+            else
+            {
+              Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_NOT_PATCHED), NULL));
+              UnicodeSPrint(Log, genericBufferSize, u"%s", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_NOT_PATCHED), NULL));
+              LogToFile(LogFile, Log);
+            }
+
+            break;
+        case PATCH:
+            isOpSkipAllowed = FALSE;
+
+            if (EFI_ERROR(Status) || ImageInfo->ImageSize == 0) { FreePool(ImageInfo); next->ARG3 = 0; }
+
+            PrintCase(L"Patch");
+
+            Print(L"%s%x\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_BIN_SIZE), NULL), ImageInfo->ImageSize);
+            UnicodeSPrint(Log, genericBufferSize, u"%s%x\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_BIN_SIZE), NULL), ImageInfo->ImageSize);
+            LogToFile(LogFile, Log);
+
+            if (next->PatchType == PATTERN && next->ARG3)
             {
               if ((UINT64)next->ARG6 > 0x199) {
-                Print(L"%s%X%s\n\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATTERN_TOO_BIG), NULL), (UINT64)next->ARG6, L"HALT!");
-                UnicodeSPrint(Log, genericBufferSize, u"%s%X%s\n\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATTERN_TOO_BIG), NULL), (UINT64)next->ARG6, L"HALT!");
+                Print(L"%s%X%s\n\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATTERN_TOO_BIG), NULL), (UINT64)next->ARG6, L"HALT!");
+                UnicodeSPrint(Log, genericBufferSize, u"%s%X%s\n\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATTERN_TOO_BIG), NULL), (UINT64)next->ARG6, L"HALT!");
                 LogToFile(LogFile, Log);
                 return EFI_UNSUPPORTED;
               };
                 
-                Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATTERN_SEARCH), NULL));
+              Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATTERN_SEARCH), NULL));
 
-                Print(L"\n%a\n\n\r", (CHAR8 *)next->RegexChar); //PrintDump ascii to screen
-                UnicodeSPrint(Log, genericBufferSize, u"%a%a%a", "\n\t", (CHAR8 *)next->RegexChar, "\n\t"); //PrintDump unicode to log
+              Print(L"\n%a\n\n\r", (CHAR8 *)next->RegexChar); //PrintDump ascii to screen
+              UnicodeSPrint(Log, genericBufferSize, u"%a%a%a", "\n\t", (CHAR8 *)next->RegexChar, "\n\t"); //PrintDump unicode to log
+              LogToFile(LogFile, Log);
+
+              INT64 PatchLimitLocal = next->PatchLimit;
+              if (PatchLimitLocal >= 0){
+                Print(L"%s%d\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATCH_LIMIT), NULL), PatchLimitLocal);
+                UnicodeSPrint(Log, genericBufferSize, u"%s%d\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATCH_LIMIT), NULL), PatchLimitLocal);
                 LogToFile(LogFile, Log);
+              }
 
-                BOOLEAN CResult = FALSE, CResult2 = FALSE; //Comparison Result
-                for (UINTN i = 0; i < ImageInfo->ImageSize - next->ARG6; i += 1)
-                {
-                  Status = EFI_WARN_RESET_REQUIRED; //Reset status to stop saving offset to ARG3
-                  CResult2 = FALSE; //Reset result to keep RegexMatch n2 running
+              for (UINTN i = 0; (i < ImageInfo->ImageSize - next->ARG6) && PatchLimitLocal; i++)
+              {
+                BOOLEAN CResult = FALSE; //Reset result to keep RegexMatch running
 
-                  if (CResult == FALSE) {
-                    //Regex match
-                    Status = RegexMatch(((UINT8 *)ImageInfo->ImageBase) + i, (CHAR8 *)next->RegexChar, (UINT8)next->ARG6, RegularExpressionProtocol, &CResult);
-                    //Status now SUCCESS
-                  }
-
-                  /*
-                  * Save offset to ARG3 if
-                  * 1. The 1st RegexMatch finished with success
-                  * 2. It happened this iteration
-                  */
-                  if (CResult != FALSE && Status == EFI_SUCCESS)
-                  {
-                    Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_STANDBY), NULL));
-
-                    UnicodeSPrint(Log, genericBufferSize, u"%s", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_FOUND_INSTANCES), NULL));
-                    LogToFile(LogFile, Log);
-
-                    isOpSkipAllowed = TRUE;
-                    next->ARG3 = i;
-                  }
-
-                  if ((UINTN)next->ARG3 == i) {
-                    PrintDump(next->ARG6, (UINT8 *)ImageInfo->ImageBase + next->ARG3); //The cause of PrintDump call edit: winraid.level1techs.com/t/89351/6
-                  }
-
-                  //Regex match with batch replacement. ARG 3 is used too widely, so I have to use RegexMatch again to fill Captures. CopyMem will be used again either.
-                  /*
-                  * Begin matching if
-                  * 1. This iteration is new
-                  * 2. The 1st RegexMatch finished with success
-                  */
-                  if ((UINTN)next->ARG3 != i && CResult != FALSE) {
-                    RegexMatch(((UINT8 *)ImageInfo->ImageBase) + i, (CHAR8 *)next->RegexChar, (UINT8)next->ARG6, RegularExpressionProtocol, &CResult2);
-                    if (CResult2 != FALSE) {
-
-                      Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_ANOTHER_MATCH), NULL));
-
-                      //Fill Captures[j]
-                      Captures[j] = i;
-                      j += 1;
-
-                      PrintDump(next->ARG6, (UINT8 *)ImageInfo->ImageBase + i);
-                    }
-                  }
+                if (!(i % 0x1000)) {
+                  //Print(L"\r0x%X out of 0x%X", &ImageInfo->ImageBase + i, &ImageInfo->ImageBase + ImageInfo->ImageSize);
+                  DisplayUpdateProgressSREP((UINTN)(((float)i / ImageInfo->ImageSize) * 100));
                 }
-                if (next->ARG3 == MAX_UINT32) //Stopped near overflow
+
+                if (i >= MAX_UINT32)
                 {
-                    Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATTERN_NOT_FOUND), NULL));
-                    UnicodeSPrint(Log, genericBufferSize, u"%s\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATTERN_NOT_FOUND), NULL));
-                    LogToFile(LogFile, Log);
+                  DisplayUpdateProgressSREP(100);
+                  Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATTERN_NOT_FOUND), NULL));
+                  UnicodeSPrint(Log, genericBufferSize, u"%s\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATTERN_NOT_FOUND), NULL));
+                  LogToFile(LogFile, Log);
 
-                    next->ARG3 = 0;
+                  next->ARG3 = 0;
+                  break;
                 }
-            }
-            if (next->PatchType == REL_POS_OFFSET && next->ARG3 != 0)
-            {
-                next->ARG3 = BaseOffset + next->ARG3;
-                Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_REL_POS_OFFSET), NULL));
-            }
-            if (next->PatchType == REL_NEG_OFFSET && next->ARG3 != 0)
-            {
-                next->ARG3 = BaseOffset - next->ARG3;
-                Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_REL_NEG_OFFSET), NULL));
-            }
-            BaseOffset = next->ARG3;
 
-            Print(L"%s%X\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_MATCH_OFFSET), NULL), next->ARG3);
-            UnicodeSPrint(Log, genericBufferSize, u"%s%X\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_MATCH_OFFSET), NULL), next->ARG3);
-            LogToFile(LogFile, Log);
-            //PrintDump(next->ARG4+10,ImageInfo->ImageBase + next->ARG3 -5 ); //A leftover from Smokeless
+                RegexMatch(((UINT8 *)ImageInfo->ImageBase) + i, (CHAR8 *)next->RegexChar, (UINT8)next->ARG6, RegularExpressionProtocol, &CResult);
 
-            if (next->ARG3 != 0) {
+                if (CResult)
+                {
+                  //Fill Captures[MatchesCount]
+                  Captures[MatchesCount] = i;
+                  MatchesCount++;
+
+                  PatchLimitLocal--;
+
+                  PrintDump(next->ARG6, (UINT8 *)ImageInfo->ImageBase + i);
+                }
+              }
+              Print(L"\n");
+            }
+
+            if (MatchesCount) {
+              next->ARG3 = Captures[MatchesCount - sizeof(UINT8)];
               isOpSkipAllowed = TRUE;
 
-              Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATCHED), NULL));
-              UnicodeSPrint(Log, genericBufferSize, u"%s", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PATCHED), NULL));
+              Print(L"%s%X\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_MATCH_OFFSET), NULL), next->ARG3);
+              UnicodeSPrint(Log, genericBufferSize, u"%s%X\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_MATCH_OFFSET), NULL), next->ARG3);
+              LogToFile(LogFile, Log);
+              Print(L"%s%d\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_TOTAL_MATCHES), NULL), MatchesCount);
+              UnicodeSPrint(Log, genericBufferSize, u"%s%d\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_TOTAL_MATCHES), NULL), MatchesCount);
               LogToFile(LogFile, Log);
 
-              //Patch first found instance only
-              CopyMem((UINT8*)ImageInfo->ImageBase + next->ARG3, (UINT8*)next->ARG5, next->ARG4);
-            }
-            else
-            {
-                Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_NOT_PATCHED), NULL));
-                UnicodeSPrint(Log, genericBufferSize, u"%s", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_NOT_PATCHED), NULL));
-                LogToFile(LogFile, Log);
-            }
-
-            //Patch every instance from Captures (it includes all except the first one)
-            if (j != 0) {
-
-              Print(L"%s%d\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_TOTAL_MATCHES), NULL), j);
-              UnicodeSPrint(Log, genericBufferSize, u"%s%d\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_TOTAL_MATCHES), NULL), j);
-              LogToFile(LogFile, Log);
-
-              for (UINTN i = 0; i < j; i += 1) {
-                Print(L"%d%s%x\n\r", i + 1, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_NEXT_OFFSET), NULL), (UINT8 *)ImageInfo->ImageBase + Captures[i]);
-                UnicodeSPrint(Log, genericBufferSize, u"%d%s%x\n\r", i + 1, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_NEXT_OFFSET), NULL), (UINT8 *)ImageInfo->ImageBase + Captures[i]);
+              for (UINTN i = 0; i < MatchesCount; i++) {
+                Print(L"%d%s%x\n\r", i + 1, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_NEXT_OFFSET), NULL), (UINT8 *)ImageInfo->ImageBase + Captures[i]);
+                UnicodeSPrint(Log, genericBufferSize, u"%d%s%x\n\r", i + 1, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_NEXT_OFFSET), NULL), (UINT8 *)ImageInfo->ImageBase + Captures[i]);
                 LogToFile(LogFile, Log);
 
                 CopyMem((UINT8 *)ImageInfo->ImageBase + Captures[i], (UINT8 *)next->ARG5, next->ARG4);
               }
+
+              Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATCHED), NULL));
+              UnicodeSPrint(Log, genericBufferSize, u"%s", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PATCHED), NULL));
+              LogToFile(LogFile, Log);
+
+              Status = EFI_SUCCESS;
+            }
+            else
+            {
+              Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_NOT_PATCHED), NULL));
+              UnicodeSPrint(Log, genericBufferSize, u"%s", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_NOT_PATCHED), NULL));
+              LogToFile(LogFile, Log);
             }
 
-            SetMem(Captures, j, 0);
-            j = 0;
-            next->ARG3 = 0;
-            Status = EFI_SUCCESS;
+            SetMem(Captures, MatchesCount * sizeof(UINT64), 0);
+            MatchesCount = 0;
             //PrintDump(next->ARG4+10,ImageInfo->ImageBase + next->ARG3 -5 ); //A leftover from Smokeless
             break;
         case UNINSTALL_PROTOCOL:
             PrintCase(L"UninstallProtocol");
 
-            Status = UninstallProtocol(next->Name, UninstallIndexes);
+            Status = UninstallProtocol(next->Name, UninstallIndices);
             if (EFI_ERROR(Status)) {
-              Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_BREAKING_CAUSE), NULL), Status);
-              UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_BREAKING_CAUSE), NULL), Status);
+              Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_BREAKING_CAUSE), NULL), Status);
+              UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_BREAKING_CAUSE), NULL), Status);
               LogToFile(LogFile, Log);
               
               isOpSkipAllowed = FALSE;
               break;
             };
 
-            Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PROTOCOL_UNINSTALLED), NULL));
-            UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PROTOCOL_UNINSTALLED), NULL));
+            Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PROTOCOL_UNINSTALLED), NULL));
+            UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PROTOCOL_UNINSTALLED), NULL));
             LogToFile(LogFile, Log);
 
             isOpSkipAllowed = !EFI_ERROR(Status);
@@ -1374,21 +1321,21 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
             PrintCase(L"Compatibility");
             if (AsciiStrCmp(next->Name, "DB9A1E3D-45CB-4ABB-853B-E5387FDB2E2D") && AsciiStrCmp(next->Name, "389F751F-1838-4388-8390-CD8154BD27F8"))
             {
-              Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_RECOMMENDED_PROTOCOLS), NULL));
+              Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_RECOMMENDED_PROTOCOLS), NULL));
             }
 
             Status = AsciiStrToGuid(next->Name, &FilterProtocol); //Now search for everything with this protocol
             if (EFI_ERROR(Status))
             {
-              Print(L"%s\"%a\"\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), next->Name);
-              UnicodeSPrint(Log, genericBufferSize, u"%s\"%a\"\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), next->Name);
+              Print(L"%s\"%a\"\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), next->Name);
+              UnicodeSPrint(Log, genericBufferSize, u"%s\"%a\"\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CONVERTATION_FAILED), NULL), next->Name);
               LogToFile(LogFile, Log);
 
               break;
             }
 
-            Print(L"%s%g\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CURRENT_FILTER), NULL), FilterProtocol);
-            UnicodeSPrint(Log, genericBufferSize, u"%s%g\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CURRENT_FILTER), NULL), FilterProtocol);
+            Print(L"%s%g\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CURRENT_FILTER), NULL), FilterProtocol);
+            UnicodeSPrint(Log, genericBufferSize, u"%s%g\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CURRENT_FILTER), NULL), FilterProtocol);
             LogToFile(LogFile, Log);
 
             Status = EFI_NOT_FOUND; //This isn't an Op which loads Image, so it mustn't pass Status from AsciiStrToGuid to patch functions
@@ -1402,20 +1349,20 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
 
             if (Status == EFI_NOT_FOUND)
             {
-              Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PACK_NOT_FOUND), NULL));
-              UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PACK_NOT_FOUND), NULL));
+              Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PACK_NOT_FOUND), NULL));
+              UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PACK_NOT_FOUND), NULL));
               LogToFile(LogFile, Log);
             }
             else if (EFI_ERROR(Status))
             {
-              Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PACK_FAILED), NULL), Status);
-              UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PACK_FAILED), NULL), Status);
+              Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PACK_FAILED), NULL), Status);
+              UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PACK_FAILED), NULL), Status);
               LogToFile(LogFile, Log);
             }
             else
             {
-              Print(L"%s0x%x / 0x%x\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_SECTION_BASENSIZE), NULL), (UINT8 *)ImageInfo->ImageBase, (UINT8 *)ImageInfo->ImageSize);
-              UnicodeSPrint(Log, genericBufferSize, u"%s0x%x / 0x%x\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_SECTION_BASENSIZE), NULL), (UINT8 *)ImageInfo->ImageBase, (UINT8 *)ImageInfo->ImageSize);
+              Print(L"%s0x%x / 0x%x\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_SECTION_BASENSIZE), NULL), (UINT8 *)ImageInfo->ImageBase, (UINT8 *)ImageInfo->ImageSize);
+              UnicodeSPrint(Log, genericBufferSize, u"%s0x%x / 0x%x\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_SECTION_BASENSIZE), NULL), (UINT8 *)ImageInfo->ImageBase, (UINT8 *)ImageInfo->ImageSize);
               LogToFile(LogFile, Log);
             }
 
@@ -1427,8 +1374,8 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
 
             if (isOpSkipAllowed == TRUE) {
 
-              Print(L"%s%d OP\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CASE_SKIP), NULL), skip_pos);
-              UnicodeSPrint(Log, genericBufferSize, u"%s%d OP\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_CASE_SKIP), NULL), skip_pos);
+              Print(L"%s%d OP\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CASE_SKIP), NULL), skip_pos);
+              UnicodeSPrint(Log, genericBufferSize, u"%s%d OP\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_CASE_SKIP), NULL), skip_pos);
               LogToFile(LogFile, Log);
 
               for (UINT8 i = 0; i < skip_pos - 1; i++) {
@@ -1438,40 +1385,12 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
             else
             {
               SkipReason = (Status == EFI_SUCCESS) ? EFI_NOT_FOUND : Status;
-              Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_LAST_STATUS), NULL), SkipReason);
-              UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_LAST_STATUS), NULL), SkipReason);
+              Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_LAST_STATUS), NULL), SkipReason);
+              UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_LAST_STATUS), NULL), SkipReason);
               LogToFile(LogFile, Log);
             }
 
             isOpSkipAllowed = FALSE;
-            break;
-        case GET_DB:  //Unused
-            isOpSkipAllowed = FALSE;
-
-            PrintCase(L"GetAptioDB");
-
-            DBSize = GetAptioHiiDB( 0 ); DBPointer = GetAptioHiiDB( 1 );
-
-            DEBUG_CODE(
-              //Debug
-              Print(L"Size: %x, Pointer: %x\n\r", DBSize, DBPointer);
-            );
-
-            if (DBSize == 0 || DBPointer == 0) {
-              Print(L"HiiDB not found\n\r");
-              UnicodeSPrint(Log, genericBufferSize, u"HiiDB not found\n\r");
-              LogToFile(LogFile, Log);
-
-              isDBThere = FALSE;
-              Status = EFI_NOT_FOUND;
-              break;
-            }
-            Print(L"HiiDB found\n\r");
-            UnicodeSPrint(Log, genericBufferSize, u"Size: %x, Pointer: %x\n\r", DBSize, DBPointer);
-            LogToFile(LogFile, Log);
-
-            isDBThere = TRUE;
-            Status = EFI_NOT_FOUND; //This is ok
             break;
         case EXEC:
             isOpSkipAllowed = FALSE;
@@ -1481,8 +1400,26 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
             gBS->Stall(3000000);
             Status = Exec(&AppImageHandle);
 
-            Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_LOAD_RESULT), NULL), Status);
-            UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_LOAD_RESULT), NULL), Status);
+            Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_LOAD_RESULT), NULL), Status);
+            UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_LOAD_RESULT), NULL), Status);
+            LogToFile(LogFile, Log);
+
+            break;
+        case SEND_FORM:
+            isOpSkipAllowed = FALSE;
+
+            PrintCase(L"SendForm");
+
+            if (HiiHandleFromFS != NULL) {
+              Status = SendFirstForm(HiiHandleFromFS);
+            }
+            else
+            {
+              Status = EFI_NOT_FOUND;
+            }
+
+            Print(L"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_LOAD_RESULT), NULL), Status);
+            UnicodeSPrint(Log, genericBufferSize, u"%s%r\n\r", HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_LOAD_RESULT), NULL), Status);
             LogToFile(LogFile, Log);
 
             break;
@@ -1520,8 +1457,8 @@ SREPEntry(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
         FreePool(tmp);
     }
 
-    Print(HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PROGRAM_END), NULL));
-    UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandle, STRING_TOKEN(STR_PROGRAM_END), NULL));
+    Print(HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PROGRAM_END), NULL));
+    UnicodeSPrint(Log, genericBufferSize, HiiGetStringSREP(HiiHandleSREP, STRING_TOKEN(STR_PROGRAM_END), NULL));
     LogToFile(LogFile, Log);
 
     return EFI_SUCCESS;

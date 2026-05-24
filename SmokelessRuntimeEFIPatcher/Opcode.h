@@ -20,7 +20,8 @@ EFI_STATUS FindLoadedImageFromShellIndex(
   IN EFI_HANDLE ImageHandle,
   IN CHAR8 *HandleIndex,
   OUT EFI_LOADED_IMAGE_PROTOCOL **ImageInfo,
-  OUT EFI_HANDLE **HandleBuffer
+  OUT EFI_HANDLE **HandleBuffer,
+  IN EFI_GUID FilterProtocol
 );
 
 EFI_STATUS LoadFromFS(
@@ -63,20 +64,28 @@ EFI_STATUS Exec(
   IN EFI_HANDLE *AppImageHandle
 );
 
+EFI_STATUS SendFirstForm(
+  IN EFI_HII_HANDLE HiiHandleFromFS
+);
+
 EFI_STATUS UninstallProtocol(
   IN CHAR8 *ProtocolGuid,
-  OUT UINTN Indexes
+  OUT UINTN IndicesCount
 );
 
-//Unused
-UINTN GetAptioHiiDB(
-  IN BOOLEAN BufferSizeOrPointer
-);
-
-EFI_STATUS
-UpdateHandlePackageList(
+EFI_STATUS UpdateHandlePackageList(
   IN EFI_HANDLE ImageHandle,
   IN CHAR8 *PackageGuid,
-  IN CHAR8 *PackageSize OPTIONAL,
+  IN CHAR8 *PackageSizeOverride OPTIONAL,
   OUT EFI_LOADED_IMAGE_PROTOCOL *ImageInfo
+);
+
+BOOLEAN DoesFvFileExist(
+  IN EFI_GUID GUID16
+);
+
+EFI_STATUS AddFirstHiiPackageFromFile(
+  IN EFI_HANDLE This,
+  IN EFI_LOADED_IMAGE_PROTOCOL *ImageInfo,
+  OUT EFI_HII_HANDLE *HiiHandleP
 );

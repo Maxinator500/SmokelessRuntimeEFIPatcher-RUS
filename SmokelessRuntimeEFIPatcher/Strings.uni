@@ -79,8 +79,8 @@
 #string STR_FOUND_NAME_INPUT                #language ru-RU  "Обнаружен ввод названия: "
                                             #language en-GB  "Found file name input: "
 
-#string STR_FOUND_GUID_INPUT                #language ru-RU  "Обнаружен ввод Guid: "
-                                            #language en-GB  "Found Guid input: "
+#string STR_FOUND_GUID_INPUT                #language ru-RU  "Обнаружен ввод GUID: "
+                                            #language en-GB  "Found GUID input: "
 
 #string STR_PACKAGE_GUID_INPUT              #language ru-RU  "Пользовательский размер для HII Package не указан, выбираем автоматически\n\r"
                                             #language en-GB  "Custom size for HII Package not specified, proceeding with normal one\n\r"
@@ -108,6 +108,9 @@
 
 #string STR_PATCH_SIZE                      #language ru-RU  "\rРазмер патча: 0x"
                                             #language en-GB  "\rPatch size: 0x"
+
+#string STR_PATCH_LIMIT                     #language ru-RU  "Ограничение количества вхождений шаблона: "
+                                            #language en-GB  "Pattern search limit is: "
 
 #string STR_PATCH_PENDING                   #language ru-RU  "Патч добавлен в очередь\n\r"
                                             #language en-GB  "Patch was set for execution\n\r"
@@ -154,11 +157,11 @@
 #string STR_FOUND_INSTANCES                 #language ru-RU  "^ Поиск строки ^\n\r\rНайденные места:\n\r"
                                             #language en-GB  "^ Search string ^\n\r\rFound patterns:\n\r"
 
-#string STR_ANOTHER_MATCH                   #language ru-RU  "Найдено ещё одно совпадение\n\r"
-                                            #language en-GB  "Found another match\n\r"
+#string STR_ANOTHER_MATCH                   #language ru-RU  "Найдено совпадение\n\r"
+                                            #language en-GB  "Found match\n\r"
 
-#string STR_TOTAL_MATCHES                   #language ru-RU  "Доп. совпадений с шаблоном: "
-                                            #language en-GB  "Additional matches for pattern: "
+#string STR_TOTAL_MATCHES                   #language ru-RU  "Совпадений с шаблоном: "
+                                            #language en-GB  "Total matches for pattern: "
 
 #string STR_NEXT_OFFSET                     #language ru-RU  " смещение в RAM: 0x"
                                             #language en-GB  " offset in RAM: 0x"
@@ -187,8 +190,8 @@
 #string STR_CURRENT_FILTER                  #language ru-RU  "Фильтрация по протоколу: "
                                             #language en-GB  "Now filtering Handles by protocol: "
 
-#string STR_NO_HANDLE                       #language ru-RU  "Не удалось найти ни одного дескриптора с указанным протоколом\n\r"
-                                            #language en-GB  "Сould not find any handle with the specified protocol\n\r"
+#string STR_NO_HANDLE                       #language ru-RU  "Не удалось найти ни одного дескриптора\n\r"
+                                            #language en-GB  "Сould not find any handle\n\r"
 
 #string STR_TE_HINT                         #language ru-RU  "Хотя в БИОС нашлась нужная секция,\nSREP может быть не способен найти TE в RAM если модификатор Op Compatibility не подходит. Размер секции: 0x"
                                             #language en-GB  "Although the section was found in BIOS,\nSREP may not be able to find TE in RAM if Op Compatibility modifier is bad. Section size: 0x"
@@ -232,8 +235,8 @@
 #string STR_HANDLE_INDEX                    #language ru-RU  "Обрабатываем новый дескриптор с индексом "
                                             #language en-GB  "Parsing new handle using index "
 
-#string STR_GET_HANDLE_LIST_FAIL            #language ru-RU  "Выделение памяти не удалось или ProtocolGuids равно NULL\n\r"
-                                            #language en-GB  "Memory allocation failed or ProtocolGuids is NULL\n\r"
+#string STR_GET_HANDLE_LIST_FAIL            #language ru-RU  "Выделение памяти не удалось или ProtocolGuid равно NULL\n\r"
+                                            #language en-GB  "Memory allocation failed or ProtocolGuid is NULL\n\r"
 
 #string STR_HANDLE_DUMP                     #language ru-RU  "Список дескрипторов:\n\r"
                                             #language en-GB  "Verbose handle list:\n\r"
@@ -243,3 +246,51 @@
 
 #string STR_PACK_FAILED                     #language ru-RU  "Не удалось найти HII Database package: "
                                             #language en-GB  "Failed locating HII Database package: "
+
+#string STR_HII_UNK_UEFI_VENDOR             #language ru-RU  "Не удалось определить UEFI vendor для подбора DevicePath из набора готовых\n\r"
+                                            #language en-GB  "Failed to determine UEFI vendor to select DevicePath from presets\n\r"
+
+#string STR_HII_DEV_PATH_NOT_FOUND          #language ru-RU  "Не удалось получить DevicePathPointer, выполнен подбор GUID: 0x"
+                                            #language en-GB  "Failed getting DevicePathPointer, preset GUID selected: 0x"
+
+#string STR_HII_SETUP_POINTERS_NOT_FOUND    #language ru-RU  "Не используйте Op LoadFromFV! Не удалось получить ни одно смещение ресурсов HII, ImageBase: 0x"
+                                            #language en-GB  "Consider not using Op LoadFromFV! Failed getting Device Path GUID and HII packages offsets in the image, ImageBase: 0x"
+
+#string STR_GET_HANDLE_PACKAGE_LIST_FAIL    #language ru-RU  "Не удалось найти ни одного HII дескриптора чтобы подтвердить загрузку.\nПробуем снова...\n\r"
+                                            #language en-GB  "Failed to list HII handles to confirm resources load.\nAttempting again...\n\r"
+
+#string STR_GET_HANDLE_PACKAGE_LIST_SUCCESS #language ru-RU  "Поиск через вызов GetHandlePackageList успешен. Дескриптор HII - "
+                                            #language en-GB  "Search via GetHandlePackageList done. HII Handle - "
+
+#string STR_GET_PACKAGE_LIST_HANDLE_FAIL    #language ru-RU  "Ошибка при вызове GetPackageListHandle\n\r"
+                                            #language en-GB  "GetPackageListHandle error\n\r"
+
+#string STR_GET_PACKAGE_LIST_HANDLE_SUCCESS #language ru-RU  "Поиск через вызов GetPackageListHandle успешен. Дескриптор EFI - "
+                                            #language en-GB  "Back search via GetPackageListHandle done. EFI Handle - "
+
+#string STR_HII_LOAD_NOT_CONFIRMED          #language ru-RU  "Ну удалось подтвердить загрузку ресурсов, вероятно дескриптор пуст\n\r"
+                                            #language en-GB  "Couldn't confirm the presence of new HII Handle, the handle is probably null\n\r"
+
+#string STR_HII_PACKAGE_LIST_GUID           #language ru-RU  "Загружен HII дескриптор с Package List:\n"
+                                            #language en-GB  "Registered HII Handle with Package List:\n"
+
+#string STR_HII_PACKAGE_LIST_SIZE           #language ru-RU  " размером 0x"
+                                            #language en-GB  " of size 0x"
+
+#string STR_HII_PACKAGE_LIST_AT             #language ru-RU  " по смещению 0x"
+                                            #language en-GB  " at 0x"
+
+#string STR_HII_LOCATE_FB_FAIL              #language ru-RU  "Не удалось найти протокол Form Browser: "
+                                            #language en-GB  "Failed to locate Form Browser protocol: "
+
+#string STR_HII_SEND_FORM_ACTION_REQUEST    #language ru-RU  "SendForm получила запрос на сброс: "
+                                            #language en-GB  "SendForm got reset request: "
+
+#string STR_HII_SEND_FORM_FAILED1           #language ru-RU  " - Не удалось отобразить формы "
+                                            #language en-GB  " - Failed to display forms of "
+
+#string STR_HII_SEND_FORM_FAILED2           #language ru-RU  "\nу HII дескриптора - "
+                                            #language en-GB  "\nfrom HII Handle - "
+
+#string STR_HII_SEND_FORM_FAILED3           #language ru-RU  ", Form Browser этого UEFI может не поддерживать SendForm\n"
+                                            #language en-GB  ", the UEFI's Form Browser may not support SendForm\n"

@@ -57,6 +57,12 @@
   gEfiRegularExpressionProtocolGuid             ## CONSUMES
   gEfiHiiPackageListProtocolGuid                ## CONSUMES
 
+  gEfiHiiDatabaseProtocolGuid ## CONSUMES
+  gEfiHiiStringProtocolGuid ## CONSUMES
+  gEfiHiiConfigAccessProtocolGuid ## CONSUMES
+  gEfiHiiPackageListProtocolGuid ## CONSUMES
+  gEfiDevicePathProtocolGuid ## CONSUMES
+
 [Guids]
   gEfiAcpiTableGuid                             ## CONSUMES      
   gEfiAcpi20TableGuid                           ## CONSUMES

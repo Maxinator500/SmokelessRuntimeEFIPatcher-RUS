@@ -45,3 +45,6 @@
 
 [Components]
   SREPPkg/SmokelessRuntimeEFIPatcher/SmokelessRuntimeEFIPatcher.inf
+
+[BuildOptions]
+  MSFT:*_*_*_CC_FLAGS = /fp:fast /Ot
