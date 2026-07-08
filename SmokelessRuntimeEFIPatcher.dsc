@@ -4,9 +4,8 @@
   PLATFORM_VERSION               = 0.01
   DSC_SPECIFICATION              = 0x00010006       
   OUTPUT_DIRECTORY               = Build/SmokelessRuntimeEFIPatcher
-  SUPPORTED_ARCHITECTURES        = IA32|X64|EBC|ARM|AARCH64
-  BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
-  SKUID_IDENTIFIER               = DEFAULT
+  SUPPORTED_ARCHITECTURES        = IA32|X64|ARM
+  BUILD_TARGETS                  = RELEASE
 
 [LibraryClasses]
   UefiApplicationEntryPoint|MdePkg/Library/UefiApplicationEntryPoint/UefiApplicationEntryPoint.inf
@@ -42,6 +41,7 @@
   UefiShellCommandLib|ShellPkg/Library/UefiShellCommandLib/UefiShellCommandLib.inf
   OrderedCollectionLib|MdePkg/Library/BaseOrderedCollectionRedBlackTreeLib/BaseOrderedCollectionRedBlackTreeLib.inf
   PeCoffGetEntryPointLib|MdePkg/Library/BasePeCoffGetEntryPointLib/BasePeCoffGetEntryPointLib.inf
+  TimerLib|UefiCpuPkg/Library/CpuTimerLib/BaseCpuTimerLib.inf
 
 [Components]
   SREPPkg/SmokelessRuntimeEFIPatcher/SmokelessRuntimeEFIPatcher.inf
