@@ -13,9 +13,6 @@
 
 #string STR_LANG_VAR_WP                     #language en-GB  "SREPLang variable doesn't exist or WP! Language switch disabled.\nStatus: "
 
-#string STR_PRESS_L                         #language ru-RU  "Нажмите \"L\" чтобы включить логирование, или ничего не делайте для пропуска\n\r"
-                                            #language en-GB  "Press \"L\" key to enable logging, or wait several seconds to leave it disabled\n\r"
-
 #string STR_LAUNCHED                        #language ru-RU  "SREP запущен\n\r"
                                             #language en-GB  "SREP launched\n\r"
 
@@ -46,8 +43,8 @@
 #string STR_CFG_SIZE                        #language ru-RU  "Размер конфига в HEX: 0x"
                                             #language en-GB  "Config size in HEX: 0x"
 
-#string STR_PARSING                         #language ru-RU  "Начало обработки данных\n\rСтираем ненужные переносы строк\n\r"
-                                            #language en-GB  "Parsing Config\n\rStripping NewLine, Carriage and Return\n\r"
+#string STR_PARSING                         #language ru-RU  "Начало обработки данных\n\r"
+                                            #language en-GB  "Parsing Config\n\r"
 
 #string STR_CURRENT_LINE                    #language ru-RU  "В данный момент обрабатываем строку "
                                             #language en-GB  "Current parsing "
@@ -173,7 +170,7 @@
                                             #language en-GB  "Skipping "
 
 #string STR_LAST_STATUS                     #language ru-RU  "Переход не случился, прошлая команда вернула: "
-                                            #language en-GB  "Skip did not happened, last command returned: "
+                                            #language en-GB  "Skip did not happen, last command returned: "
 
 #string STR_BREAKING_CAUSE                  #language ru-RU  "Причина остановки: "
                                             #language en-GB  "Breaking cause: "
@@ -229,8 +226,8 @@
 #string STR_FAILED_UNINSTALLING             #language ru-RU  "Не удалось удалить протокол: "
                                             #language en-GB  "Could not uninstall protocol: "
 
-#string STR_PROGRAM_END                     #language ru-RU  "\nКонец программы\n\r"
-                                            #language en-GB  "\nProgram has ended\n\r"
+#string STR_PROGRAM_END                     #language ru-RU  "\nКонец программы, выполнение конфига заняло "
+                                            #language en-GB  "\nProgram has ended, it took "
 
 #string STR_HANDLE_INDEX                    #language ru-RU  "Обрабатываем новый дескриптор с индексом "
                                             #language en-GB  "Parsing new handle using index "

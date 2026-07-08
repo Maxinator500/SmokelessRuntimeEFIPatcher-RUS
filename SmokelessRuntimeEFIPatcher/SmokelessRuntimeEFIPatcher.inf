@@ -3,7 +3,6 @@
 	BASE_NAME                      = SmokelessRuntimeEFIPatcher
 	FILE_GUID                      = 24ba59e6-8d34-4fe4-83a0-da8e478ecbfe
 	MODULE_TYPE                    = UEFI_APPLICATION
-	VERSION_STRING                 = 0.1
 	ENTRY_POINT                    = SREPEntry
   UEFI_HII_RESOURCE_SECTION      = TRUE
 
@@ -13,6 +12,8 @@
   OpCode.c
   RussianFont.c
   Strings.uni
+  Images.idf
+  Oniguruma.efi
 
 [Packages]
   SREPPkg/SmokelessRuntimeEFIPatcher.dec
@@ -20,6 +21,7 @@
   MdeModulePkg/MdeModulePkg.dec
   CryptoPkg/CryptoPkg.dec
   ShellPkg/ShellPkg.dec
+  UefiCpuPkg/UefiCpuPkg.dec
 
 [LibraryClasses]
   UefiApplicationEntryPoint
@@ -35,37 +37,26 @@
   PrintLib
   UefiLib
   DevicePathLib
-  ShellLib
   FileHandleLib
   SortLib
   HandleParsingLib
   UefiShellCommandLib
+  TimerLib
 
 [Protocols]
   gEfiLoadedImageProtocolGuid                   ## CONSUMES
   gEfiSimpleFileSystemProtocolGuid              ## CONSUMES
   gEfiLoadFileProtocolGuid                      ## CONSUMES
-  gEfiHiiConfigAccessProtocolGuid               ## CONSUMES
-  gEfiSerialIoProtocolGuid                      ## CONSUMES
+  gEfiDevicePathProtocolGuid                    ## CONSUMES
   gEfiDevicePathToTextProtocolGuid              ## CONSUMES
-  gEfiShellParametersProtocolGuid               ## CONSUMES
   gEfiFirmwareVolume2ProtocolGuid               ## CONSUMES
-  gEdkiiFormBrowserEx2ProtocolGuid              ## CONSUMES
-  gEdkiiFormBrowserExProtocolGuid               ## CONSUMES
   gEfiHiiPopupProtocolGuid                      ## CONSUMES
-  gEdkiiFormDisplayEngineProtocolGuid           ## CONSUMES
   gEfiRegularExpressionProtocolGuid             ## CONSUMES
   gEfiHiiPackageListProtocolGuid                ## CONSUMES
-
-  gEfiHiiDatabaseProtocolGuid ## CONSUMES
-  gEfiHiiStringProtocolGuid ## CONSUMES
-  gEfiHiiConfigAccessProtocolGuid ## CONSUMES
-  gEfiHiiPackageListProtocolGuid ## CONSUMES
-  gEfiDevicePathProtocolGuid ## CONSUMES
+  gEfiHiiDatabaseProtocolGuid                   ## CONSUMES
+  gEfiHiiStringProtocolGuid                     ## CONSUMES
 
 [Guids]
-  gEfiAcpiTableGuid                             ## CONSUMES      
-  gEfiAcpi20TableGuid                           ## CONSUMES
   gEfiDxeServicesTableGuid                      ## CONSUMES
   gEfiGlobalVariableGuid                        ## CONSUMES
   gHIIRussianFontGuid                           ## PRODUCES
