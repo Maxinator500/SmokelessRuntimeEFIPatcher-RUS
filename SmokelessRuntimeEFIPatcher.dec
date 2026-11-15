@@ -1,0 +1,10 @@
+[Defines]
+  DEC_SPECIFICATION              = 0x00010006
+  PACKAGE_NAME                   = SmokelessRuntimeEFIPatcherPkg
+  PACKAGE_GUID                   = D96C279F-CAAC-41F0-AD2C-8BEC749BA76C
+  PACKAGE_VERSION                = 1.01
+
+[Includes]
+
+[Guids]
+  gHIIRussianFontGuid = { 0x9fe2f616, 0x323c, 0x45a7, { 0x87, 0xa2, 0xdf, 0xef, 0xf5, 0x17, 0xcc, 0x66 }}

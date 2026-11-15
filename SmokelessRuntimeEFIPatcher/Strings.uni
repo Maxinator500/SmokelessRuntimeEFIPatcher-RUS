@@ -1,0 +1,306 @@
+#langdef ru-RU "Русский"
+#langdef en-GB "English"
+
+#string STR_RUS_MODE                        #language en-GB  "Russian mode\n\n\r"
+
+#string STR_ENG_MODE                        #language en-GB  "English mode\n\n\r"
+
+#string STR_SHELL_STATUS                    #language en-GB  "ShellParameters init status: "
+
+#string STR_LANG_SWITCH_DISABLED            #language en-GB  "Language switch is disabled due to the outdated UEFI shell or driver load!\n\n\r"
+
+#string STR_LANG_VAR_WP                     #language en-GB  "SREPLang variable doesn't exist or WP! Language switch disabled.\nStatus: "
+
+#string STR_LAUNCHED                        #language ru-RU  "SREP запущен\n\r"
+                                            #language en-GB  "SREP launched\n\r"
+
+#string STR_DEL_LOG                         #language ru-RU  "Старый лог был удалён\n\r"
+                                            #language en-GB  "The old log has been deleted\n\r"
+
+#string STR_FAILED_REGEX                    #language ru-RU  "Зависимости не найдены: RegularExpressionProtocol\nУбедитесь что файл Oniguruma.efi доступен\n\r"
+                                            #language en-GB  "Failed on Locating RegularExpressionProtocol\nMake sure Oniguruma.efi is available on FS\n\r"
+
+#string STR_FAILED_REGEX2                   #language ru-RU  " Op отключено поскольку не найден RegularExpressionProtocol\nпопробуйте использовать - "
+                                            #language en-GB  " Op is disabled due to the missing RegularExpressionProtocol\nconsider using - "
+
+#string STR_LOG_CANCEL                      #language ru-RU  "Логирование отменено\n\r"
+                                            #language en-GB  "Logging has been canceled\n\r"
+
+#string STR_LOG_OPEN_FAIL                   #language ru-RU  "Не удалось подготовить логирование.\nУбедитесь что накопитель в формате FAT\n\r"
+                                            #language en-GB  "Failed on opening log file\n\r"
+
+#string STR_CFG_SEARCH_FAIL                 #language ru-RU  "Не удалось найти файл конфига\n\r"
+                                            #language en-GB  "Failed on searching for config file\n\r"                                    
+
+#string STR_CFG_OPEN_FAIL                   #language ru-RU  "Не удалось открыть файл конфига\n\r"
+                                            #language en-GB  "Failed on opening cfg file\n\r"
+
+#string STR_CFG_FOUND                       #language ru-RU  "Файл конфига: "
+                                            #language en-GB  "Found config file: "
+
+#string STR_CFG_SIZE                        #language ru-RU  "Размер конфига в HEX: 0x"
+                                            #language en-GB  "Config size in HEX: 0x"
+
+#string STR_PARSING                         #language ru-RU  "Начало обработки данных\n\r"
+                                            #language en-GB  "Parsing Config\n\r"
+
+#string STR_CURRENT_LINE                    #language ru-RU  "В данный момент обрабатываем строку "
+                                            #language en-GB  "Current parsing "
+
+#string STR_COMMAND                         #language ru-RU  "Команда "
+                                            #language en-GB  "Command "
+
+#string STR_OP_END                          #language ru-RU  "Op End остановило обработку\n\r"
+                                            #language en-GB  "Op End detected, parsing finished\n\r"
+
+#string STR_OP_EXEC                         #language ru-RU  "Обнаружена команда Exec, запуск приложения доб. в очередь\n\r"
+                                            #language en-GB  "Op Exec detected\n\r"
+
+#string STR_OP_SKIP                         #language ru-RU  "Обнаружена команда Skip\n\r"
+                                            #language en-GB  "Op Skip detected\n\r"
+
+#string STR_OP_SKIP_SUPPORTED               #language ru-RU  "В случае успеха предыдущей,\nбудет выполнен переход на указанное кол-во команд вперёд\n\r"
+                                            #language en-GB  "If the previous Op succeeds,\nskip will be performed\n\r"
+
+#string STR_OP_SKIP_UNSUPPORTED             #language ru-RU  "Но предыдущая Op не поддерживает эту команду, поэтому пропуск не случится\n\r"
+                                            #language en-GB  "But the previous Op doesn't support \"Op Skip\", so nothing's going to happen\n\r"
+
+#string STR_INACTIVE_OP                     #language ru-RU  "Я закомментировал эту команду, сейчас она не сработает\n\r"
+                                            #language en-GB  "I commented out this Op, you can't use it\n\r"
+
+#string STR_INVALID_OP                      #language ru-RU  "Следующая команда неверна: "
+                                            #language en-GB  "The following command is invalid: "
+
+#string STR_FOUND_NAME_INPUT                #language ru-RU  "Обнаружен ввод названия: "
+                                            #language en-GB  "Found file name input: "
+
+#string STR_FOUND_GUID_INPUT                #language ru-RU  "Обнаружен ввод GUID: "
+                                            #language en-GB  "Found GUID input: "
+
+#string STR_PACKAGE_GUID_INPUT              #language ru-RU  "Пользовательский размер для HII Package не указан, выбираем автоматически\n\r"
+                                            #language en-GB  "Custom size for HII Package not specified, proceeding with normal one\n\r"
+
+#string STR_PACKAGE_SIZE_INPUT              #language ru-RU  "Ввод размера HII Package: "
+                                            #language en-GB  "HII Package size input: "
+
+#string STR_RAW_GUID_INPUT                  #language ru-RU  "Freeform Section Subtype GUID не указан,\nвместо этого ищем секцию RAW\n\r"
+                                            #language en-GB  "Freeform Section Subtype GUID not specified, \nlooking for RAW instead\n\r"
+
+#string STR_SECTION_GUID_INPUT              #language ru-RU  "Ввод SectionGuid: "
+                                            #language en-GB  "SectionGuid input: "
+
+#string STR_NO_PATCH_TYPE                   #language ru-RU  "Ожидалось Pattern или Offset, но получен аргумент: "
+                                            #language en-GB  "Expected Pattern or Offset argument, but got: "
+
+#string STR_ARG_OFFSET                      #language ru-RU  "Смещение получено\n\r"
+                                            #language en-GB  "Found Offset\n\r"
+
+#string STR_ARG_PATTERN                     #language ru-RU  "Шаблон получен\n\r"
+                                            #language en-GB  "Found Pattern\n\r"
+
+#string STR_ARG_OFFSET_DECODED              #language ru-RU  "Смещение посчитано\n\r"
+                                            #language en-GB  "Offset decoded\n\r"
+
+#string STR_PATTERN_SIZE                    #language ru-RU  "\rРазмер шаблона: 0x"
+                                            #language en-GB  "\rPattern size: 0x"
+
+#string STR_PATCH_SIZE                      #language ru-RU  "\rРазмер патча: 0x"
+                                            #language en-GB  "\rPatch size: 0x"
+
+#string STR_PATCH_LIMIT                     #language ru-RU  "Ограничение количества вхождений шаблона: "
+                                            #language en-GB  "Pattern search limit is: "
+
+#string STR_PATCH_PENDING                   #language ru-RU  "Патч добавлен в очередь\n\r"
+                                            #language en-GB  "Patch was set for execution\n\r"
+
+#string STR_BASIC_CASE                      #language ru-RU  "Выполняется аргумент "
+                                            #language en-GB  "Executing "
+
+#string STR_SEARCH_RESULT                   #language ru-RU  "Результат попытки поиска: "
+                                            #language en-GB  "Search result: "
+
+#string STR_IMAGE_GUIDNSIZE                 #language ru-RU  "GUID и размер найденного драйвера: "
+                                            #language en-GB  "Found Image GUID and Size: "
+
+#string STR_IMAGE_BASENSIZE                 #language ru-RU  "Смещение и размер секции: "
+                                            #language en-GB  "Image Base and Size: "
+
+#string STR_BIN_SIZE                        #language ru-RU  "Размер целевого, последнего загруженного драйвера в HEX: 0x"
+                                            #language en-GB  "Patching Image Size: 0x"
+
+#string STR_PATTERN_SEARCH                  #language ru-RU  "Поиск шаблона\n\r
+                                            #language en-GB  "Searching Pattern\n\r"
+
+#string STR_PATTERN_NOT_FOUND               #language ru-RU  "Шаблон не найден\n\r
+                                            #language en-GB  "Pattern not found\n\r"
+
+#string STR_REL_POS_OFFSET                  #language ru-RU  "Поиск смещения вперёд\n\r"
+                                            #language en-GB  "Going forward\n\r"
+
+#string STR_REL_NEG_OFFSET                  #language ru-RU  "Поиск смещения назад\n\r"
+                                            #language en-GB  "Going backwards\n\r"
+
+#string STR_MATCH_OFFSET                    #language ru-RU  "Смещение в секции: 0x"
+                                            #language en-GB  "Offset in section: 0x"
+
+#string STR_PATCHED                         #language ru-RU  "Патч выполнен\n\r"
+                                            #language en-GB  "Patched\n\r"
+
+#string STR_NOT_PATCHED                     #language ru-RU  "Патч провалился\n\r"
+                                            #language en-GB  "Not patched\n\r"
+
+#string STR_PATTERN_TOO_BIG                 #language ru-RU  "Шаблон превышает макс. размер в 200h байт: "
+                                            #language en-GB  "The pattern exceeds the maximum size of 200h bytes: "
+
+#string STR_PATCH_OUT_OF_BOUNDS             #language ru-RU  "Место патча вне границ указанного драйвера, патч не записан\n\r"
+                                            #language en-GB  "The patch would run past the end of the image, refusing to write it\n\r"
+
+#string STR_MATCH_LIMIT_REACHED             #language ru-RU  "Достигнут лимит поиска совпадений, остановка\n\r"
+                                            #language en-GB  "Reached the maximum number of recorded matches, stopping the search\n\r"
+
+#string STR_OUT_OF_RESOURCES                #language ru-RU  "Выделение памяти провалилось\n\r"
+                                            #language en-GB  "Memory allocation failed\n\r"
+
+#string STR_STANDBY                         #language ru-RU  "Найдено\n\rЖдите...\n\r"
+                                            #language en-GB  "Found\n\rPlease, standby...\n\r"
+
+#string STR_FOUND_INSTANCES                 #language ru-RU  "^ Поиск строки ^\n\r\rНайденные места:\n\r"
+                                            #language en-GB  "^ Search string ^\n\r\rFound patterns:\n\r"
+
+#string STR_ANOTHER_MATCH                   #language ru-RU  "Найдено совпадение\n\r"
+                                            #language en-GB  "Found match\n\r"
+
+#string STR_TOTAL_MATCHES                   #language ru-RU  "Совпадений с шаблоном: "
+                                            #language en-GB  "Total matches for pattern: "
+
+#string STR_NEXT_OFFSET                     #language ru-RU  " смещение в RAM: 0x"
+                                            #language en-GB  " offset in RAM: 0x"
+
+#string STR_LOADIMAGE_ERROR                 #language ru-RU  "Ошибка gBS->LoadImage\n\r"
+                                            #language en-GB  "gBS->LoadImage error\n\r"
+
+#string STR_LOAD_RESULT                     #language ru-RU  "Драйвер сообщил: "
+                                            #language en-GB  "Image Returned: "
+
+#string STR_CASE_SKIP                       #language ru-RU  "Пропускаем "
+                                            #language en-GB  "Skipping "
+
+#string STR_LAST_STATUS                     #language ru-RU  "Переход не случился, прошлая команда вернула: "
+                                            #language en-GB  "Skip did not happen, last command returned: "
+
+#string STR_PROCESSED_VOLUMES               #language ru-RU  "Ищем в томе "
+                                            #language en-GB  "Searching on Firmware Volume "
+
+#string STR_PROTOCOL_UNINSTALLED            #language ru-RU  "Протокол удален\n\r"
+                                            #language en-GB  "Protocol uninstalled\n\r"
+
+#string STR_CONVERTATION_FAILED             #language ru-RU  "Не удалось сконвертировать строку: "
+                                            #language en-GB  "Failed converting input string: "
+
+#string STR_NO_HANDLE                       #language ru-RU  "Не удалось найти ни одного дескриптора\n\r"
+                                            #language en-GB  "Сould not find any handle\n\r"
+
+#string STR_TE_HINT                         #language ru-RU  "Хотя в БИОС нашлась нужная секция,\nSREP может быть не способен найти TE в RAM если модификатор Op Compatibility не подходит. Размер секции: 0x"
+                                            #language en-GB  "Although the section was found in BIOS,\nSREP may not be able to find TE in RAM if Op Compatibility modifier is bad. Section size: 0x"
+
+#string STR_FOUND_LOADED_GUID               #language ru-RU  "Найдена секция размера: 0x"
+                                            #language en-GB  "Found handle of size: 0x"
+
+#string STR_NO_HANDLE_WITH_EFISIMPLEFS      #language ru-RU  "Не удалось найти ни одного дескриптора с\nподдержкой EfiSimpleFileSystemProtocol\n\r"
+                                            #language en-GB  "Could not find any handle on EfiSimpleFileSystemProtocol\n\r"
+
+#string STR_UNSUPPORTED_PROTOCOL            #language ru-RU  "Протокол не поддерживается: "
+                                            #language en-GB  "Protocol is not supported: "
+
+#string STR_FAILED_FS_LOAD                  #language ru-RU  "Не удалось загрузить драйвер из FS"
+                                            #language en-GB  "Could not load the image from FS"
+
+#string STR_SUCCESSFUL_FS_LOAD              #language ru-RU  "Успешно загружен драйвер из FS"
+                                            #language en-GB  "Loaded the image with success from FS"
+
+#string STR_NULL_DRIVER_BUFFER              #language ru-RU  "Размер указанного драйвера слишком мал: "
+                                            #language en-GB  "Buffer of the specified driver is too small: "
+
+#string STR_DUMPING                         #language ru-RU  "Создаем дамп секции на накопителе,\nэто должно занять не более 3 сек.\nИначе, UEFI не поддерживается.\n\r"
+                                            #language en-GB  "Creating section dump on FS,\nthis shouldn't take more than 3 secs.\nOtherwise, UEFI system unsupported.\n\r"
+
+#string STR_DEFAULT_FILTER                  #language ru-RU  "Поиск будет выполнен через EfiFirmwareVolume2Protocol\n\r"
+                                            #language en-GB  "Going to search with EfiFirmwareVolume2Protocol\n\r"
+
+#string STR_RETRIEVE_FREEFORM               #language ru-RU  "Пытаемся найти секцию FREEFORM в файле\n\r"
+                                            #language en-GB  "Trying to retrieve FREEFORM section from file\n\r"
+
+#string STR_FAILED_GETTING_PROTOCOL_POINTER #language ru-RU  "Не удалось получить смещение указателя на протокол от дескриптора "
+                                            #language en-GB  "Failed to retrieve protocol interface of Handle "
+
+#string STR_FAILED_UNINSTALLING             #language ru-RU  "Не удалось удалить протокол: "
+                                            #language en-GB  "Could not uninstall protocol: "
+
+#string STR_PROGRAM_END                     #language ru-RU  "\nКонец программы\n\r"
+                                            #language en-GB  "\nProgram has ended\n\r"
+
+#string STR_HANDLE_INDEX                    #language ru-RU  "Обрабатываем новый дескриптор с индексом "
+                                            #language en-GB  "Parsing new handle using index "
+
+#string STR_GET_HANDLE_LIST_FAIL            #language ru-RU  "Выделение памяти не удалось или ProtocolGuid равно NULL\n\r"
+                                            #language en-GB  "Memory allocation failed or ProtocolGuid is NULL\n\r"
+
+#string STR_HANDLE_DUMP                     #language ru-RU  "Список дескрипторов:\n\r"
+                                            #language en-GB  "Verbose handle list:\n\r"
+
+#string STR_PACK_UPDATE_SUCCESS             #language ru-RU  "GUID package был успешно сопоставлен с образом дескриптора и обновлен\n\r"
+                                            #language en-GB  "GUID package was matched with image handle and updated successfully\n\r"
+
+#string STR_PACK_NOT_FOUND                  #language ru-RU  "Form Set не найден в последнем загруженном дескрипторе или ещё не опубликован в HII Database\n\r"
+                                            #language en-GB  "The Form Set couldn't be found in last Loaded Handle or doesn't exist in HII Database\n\r"
+
+#string STR_PACK_FAILED                     #language ru-RU  "Не удалось найти HII Database package: "
+                                            #language en-GB  "Failed locating HII Database package: "
+
+#string STR_HII_UNK_UEFI_VENDOR             #language ru-RU  "Не удалось определить UEFI vendor для подбора DevicePath из набора готовых\n\r"
+                                            #language en-GB  "Failed to determine UEFI vendor to select DevicePath from presets\n\r"
+
+#string STR_HII_DEV_PATH_NOT_FOUND          #language ru-RU  "Не удалось получить DevicePathPointer, выполнен подбор GUID: 0x"
+                                            #language en-GB  "Failed getting DevicePathPointer, preset GUID selected: 0x"
+
+#string STR_HII_SETUP_POINTERS_NOT_FOUND    #language ru-RU  "Не используйте Op LoadFromFV! Не удалось получить ни одно смещение ресурсов HII, ImageBase: 0x"
+                                            #language en-GB  "Consider not using Op LoadFromFV! Failed getting Device Path GUID and HII packages offsets in the image, ImageBase: 0x"
+
+#string STR_GET_HANDLE_PACKAGE_LIST_FAIL    #language ru-RU  "Не удалось найти ни одного HII дескриптора чтобы подтвердить загрузку.\nПробуем снова...\n\r"
+                                            #language en-GB  "Failed to list HII handles to confirm resources load.\nAttempting again...\n\r"
+
+#string STR_GET_HANDLE_PACKAGE_LIST_SUCCESS #language ru-RU  "Поиск через вызов GetHandlePackageList успешен. Дескриптор HII - "
+                                            #language en-GB  "Search via GetHandlePackageList done. HII Handle - "
+
+#string STR_GET_PACKAGE_LIST_HANDLE_FAIL    #language ru-RU  "Ошибка при вызове GetPackageListHandle\n\r"
+                                            #language en-GB  "GetPackageListHandle error\n\r"
+
+#string STR_GET_PACKAGE_LIST_HANDLE_SUCCESS #language ru-RU  "Поиск через вызов GetPackageListHandle успешен. Дескриптор EFI - "
+                                            #language en-GB  "Back search via GetPackageListHandle done. EFI Handle - "
+
+#string STR_HII_LOAD_NOT_CONFIRMED          #language ru-RU  "Ну удалось подтвердить загрузку ресурсов, вероятно дескриптор пуст\n\r"
+                                            #language en-GB  "Couldn't confirm the presence of new HII Handle, the handle is probably null\n\r"
+
+#string STR_HII_PACKAGE_LIST_GUID           #language ru-RU  "Загружен HII дескриптор с Package List:\n"
+                                            #language en-GB  "Registered HII Handle with Package List:\n"
+
+#string STR_HII_PACKAGE_LIST_SIZE           #language ru-RU  " размером 0x"
+                                            #language en-GB  " of size 0x"
+
+#string STR_HII_PACKAGE_LIST_AT             #language ru-RU  " по смещению 0x"
+                                            #language en-GB  " at 0x"
+
+#string STR_HII_LOCATE_FB_FAIL              #language ru-RU  "Не удалось найти протокол Form Browser: "
+                                            #language en-GB  "Failed to locate Form Browser protocol: "
+
+#string STR_HII_SEND_FORM_ACTION_REQUEST    #language ru-RU  "SendForm получила запрос на сброс: "
+                                            #language en-GB  "SendForm got reset request: "
+
+#string STR_HII_SEND_FORM_FAILED1           #language ru-RU  " - Не удалось отобразить формы "
+                                            #language en-GB  " - Failed to display forms of "
+
+#string STR_HII_SEND_FORM_FAILED2           #language ru-RU  "\nу HII дескриптора - "
+                                            #language en-GB  "\nfrom HII Handle - "
+
+#string STR_HII_SEND_FORM_FAILED3           #language ru-RU  ", Form Browser этого UEFI может не поддерживать SendForm\n"
+                                            #language en-GB  ", the UEFI's Form Browser may not support SendForm\n"

@@ -1,0 +1,35 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Install Missing Tools
+      run: sudo apt install nasm
+    - uses: actions/checkout@v3
+      with:
+        repository: tianocore/edk2
+        ref: 'edk2-stable202205'
+        submodules : true
+        path: edk2
+    - uses: actions/checkout@v3
+      with:
+        path: edk2/SmokelessRuntimeEFIPatcher
+    - name: Build Base Tools
+      working-directory: edk2
+      run: make -C BaseTools
+    - name: Build
+      working-directory: edk2
+      run: "source edksetup.sh && build -b RELEASE -t GCC5 -p SmokelessRuntimeEFIPatcher/SmokelessRuntimeEFIPatcher.dsc -a X64 -s"
+    - uses: actions/upload-artifact@v3.1.0
+      with:
+        name: "SREP"
+        path: edk2/Build/SmokelessRuntimeEFIPatcher/RELEASE_GCC5/X64/SmokelessRuntimeEFIPatcher.efi

@@ -1,0 +1,65 @@
+[Defines]
+	INF_VERSION                    = 0x00010006
+	BASE_NAME                      = SmokelessRuntimeEFIPatcher
+	FILE_GUID                      = 24ba59e6-8d34-4fe4-83a0-da8e478ecbfe
+	MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+	ENTRY_POINT                    = SREPEntry
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+	SmokelessRuntimeEFIPatcher.c
+  Utility.c
+  OpCode.c
+  RussianFont.c
+  Strings.uni
+  Images.idf
+  MySuppressIfPatcherUPDATE1.efi
+  Oniguruma.efi
+
+[Packages]
+  SREPPkg/SmokelessRuntimeEFIPatcher.dec
+	MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  CryptoPkg/CryptoPkg.dec
+  ShellPkg/ShellPkg.dec
+
+[LibraryClasses]
+  # UefiApplicationEntryPoint
+  UefiDriverEntryPoint
+  UefiLib
+  UefiHiiServicesLib
+  BaseLib
+  HiiLib
+  MemoryAllocationLib
+  BaseMemoryLib
+  DebugLib
+  BaseCryptLib
+  PrintLib
+  UefiLib
+  DevicePathLib
+  FileHandleLib
+  SortLib
+  OrderedCollectionLib
+  PeCoffGetEntryPointLib
+  HandleParsingLib
+  ShellCommandLib
+
+[Protocols]
+  gEfiLoadedImageProtocolGuid                   ## CONSUMES
+  gEfiSimpleFileSystemProtocolGuid              ## CONSUMES
+  gEfiLoadFileProtocolGuid                      ## CONSUMES
+  gEfiDevicePathProtocolGuid                    ## CONSUMES
+  gEfiDevicePathToTextProtocolGuid              ## CONSUMES
+  gEfiFirmwareVolume2ProtocolGuid               ## CONSUMES
+  gEfiHiiPopupProtocolGuid                      ## CONSUMES
+  gEfiRegularExpressionProtocolGuid             ## CONSUMES
+  gEfiHiiPackageListProtocolGuid                ## CONSUMES
+  gEfiHiiDatabaseProtocolGuid                   ## CONSUMES
+  gEfiHiiStringProtocolGuid                     ## CONSUMES
+
+[Guids]
+  gEfiDxeServicesTableGuid                      ## CONSUMES
+  gEfiGlobalVariableGuid                        ## CONSUMES
+  gZeroGuid                                     ## CONSUMES
+  gHIIRussianFontGuid                           ## PRODUCES
